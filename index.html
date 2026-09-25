@@ -495,6 +495,32 @@
   .tree-item-name { flex: 1; font-weight: 500; }
   .tree-item-qty { font-size: 0.75rem; color: #666; font-weight: 600; }
   .tree-item-note { font-size: 0.72rem; color: var(--muted); width: 100%; padding-left: 0; margin-top: 0.1rem; }
+  /* ===== 底部 Tab Bar（手機 App 風格） ===== */
+  .page { padding-bottom: 5.5rem; }
+  .tab-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 200;
+    background: var(--card); border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab-bar-inner { display: flex; max-width: 680px; margin: 0 auto; }
+  .tab-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    font-size: 0.72rem; color: var(--muted); padding: 0.55rem 0 0.5rem;
+  }
+  .tab-btn .tab-icon { font-size: 1.35rem; line-height: 1; }
+  .tab-btn.active { color: var(--accent); font-weight: 700; }
+  .settings-section { margin: 1rem 0; }
+  .settings-section-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem; }
+  .settings-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .get-key-link {
+    display: inline-block; margin-top: 0.45rem; font-size: 0.8rem; font-weight: 700;
+    color: var(--accent); background: var(--accent-light);
+    border: 1px solid var(--accent); border-radius: 6px; padding: 0.35rem 0.75rem;
+    text-decoration: none;
+  }
+  .get-key-link:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -507,74 +533,14 @@
   </div>
   <div class="subtitle" data-i18n="subtitle">說出物品位置、名稱、數量，AI 自動整理成結構化庫存資料</div>
 
-  <div class="settings-toggle" onclick="toggleSettings()">
-    <div class="settings-toggle-left">
-      <span class="settings-icon">⚙️</span>
-      <span class="settings-title" data-i18n="settingsTitle">AI 設定</span>
-      <span class="settings-status missing" id="settingsStatus">未設定</span>
-    </div>
-    <span class="settings-caret" id="settingsCaret">▾</span>
-  </div>
 
-  <div class="settings-panel" id="settingsPanel">
-    <div class="provider-grid">
-      <button class="provider-btn" id="provider-claude" onclick="selectProvider('claude')">
-        <span class="provider-btn-name">Claude</span>
-        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
-      </button>
-      <button class="provider-btn" id="provider-gemini" onclick="selectProvider('gemini')">
-        <span class="provider-btn-name">Gemini</span>
-        <span class="provider-btn-cors" data-i18n="providerDirect">✓ 可直連</span>
-      </button>
-      <button class="provider-btn" id="provider-deepseek" onclick="selectProvider('deepseek')">
-        <span class="provider-btn-name">DeepSeek</span>
-        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
-      </button>
-      <button class="provider-btn" id="provider-grok" onclick="selectProvider('grok')">
-        <span class="provider-btn-name">Grok</span>
-        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
-      </button>
-    </div>
 
-    <div class="settings-note" id="corsNote"></div>
-
-    <div class="settings-field">
-      <label class="settings-label" data-i18n="labelModel">模型</label>
-      <select class="settings-input" id="modelSelect" onchange="onModelChange()" style="font-family:'Inter',sans-serif; cursor:pointer;"></select>
-    </div>
-
-    <div class="settings-field">
-      <label class="settings-label">API Key</label>
-      <input type="password" class="settings-input" id="apiKeyInput" placeholder="貼上你的 API Key" data-i18n-placeholder="apiKeyPlaceholder">
-    </div>
-
-    <div class="settings-field" id="proxyField" style="display:none">
-      <label class="settings-label" data-i18n="labelProxy">代理伺服器網址（需要代理的供應商）</label>
-      <input type="text" class="settings-input" id="proxyInput" placeholder="例如：http://localhost:3000/api/chat" data-i18n-placeholder="proxyPlaceholder">
-    </div>
-
-    <div class="settings-note" data-i18n="settingsNoteKey">
-      API Key 僅儲存在你瀏覽器的 localStorage，不會上傳到任何伺服器。重新整理頁面不會消失，但換瀏覽器或清除快取會消失。
-    </div>
-
-    <div class="settings-save-row">
-      <button class="settings-save-btn" onclick="saveSettings()" data-i18n="btnSaveSettings">儲存設定</button>
-      <button class="settings-clear-btn" onclick="clearSettings()" data-i18n="btnClearSettings">清除</button>
-    </div>
-  </div>
-
+  <!-- ===== Tab：tab-add ===== -->
+  <section class="tab-section" id="tab-add">
   <div class="lang-row" style="display:grid; grid-template-columns: repeat(3, 1fr);">
     <button class="lang-btn active" id="inputVoice" onclick="setInputMode('voice')" data-i18n="inputVoice">🎙️ 語音輸入</button>
     <button class="lang-btn" id="inputText" onclick="setInputMode('text')" data-i18n="inputText">⌨️ 文字輸入</button>
     <button class="lang-btn" id="inputPhoto" onclick="setInputMode('photo')" data-i18n="inputPhoto">📷 拍照輸入</button>
-  </div>
-
-  <div class="search-card">
-    <div class="search-row">
-      <input type="text" class="search-input" id="searchInput" placeholder="找東西，例如：眼鏡在哪裡？" onkeydown="if(event.key==='Enter')doSearch()" data-i18n-placeholder="searchPlaceholder">
-      <button class="search-btn" id="searchBtn" onclick="doSearch()" data-i18n="searchBtn">搜尋</button>
-    </div>
-    <div class="search-result" id="searchResult"></div>
   </div>
 
   <div class="mic-card" id="micCard">
@@ -619,6 +585,18 @@
 
   <div class="error-box" id="errorBox"></div>
 
+  </section>
+
+  <!-- ===== Tab：tab-items ===== -->
+  <section class="tab-section" id="tab-items" style="display:none">
+  <div class="search-card">
+    <div class="search-row">
+      <input type="text" class="search-input" id="searchInput" placeholder="找東西，例如：眼鏡在哪裡？" onkeydown="if(event.key==='Enter')doSearch()" data-i18n-placeholder="searchPlaceholder">
+      <button class="search-btn" id="searchBtn" onclick="doSearch()" data-i18n="searchBtn">搜尋</button>
+    </div>
+    <div class="search-result" id="searchResult"></div>
+  </div>
+
   <!-- History -->
   <div class="history-toggle" onclick="toggleHistory()">
     <div class="history-toggle-left">
@@ -637,12 +615,10 @@
   <div class="log-header">
     <span class="log-title" data-i18n="logTitle">庫存紀錄</span>
     <div class="log-actions">
-      <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJsonImport(event)">
-      <button class="log-btn" onclick="uploadJson()" data-i18n="btnImportJson">⬆ 匯入 JSON</button>
-      <button class="log-btn" onclick="downloadJson()" data-i18n="btnExportJson">⬇ 匯出 JSON</button>
       <button class="log-btn" onclick="clearLog()" data-i18n="btnClearLog">清空</button>
     </div>
   </div>
+
   <div class="log-header" style="margin-top:-0.5rem">
     <div class="view-toggle">
       <button class="view-btn active" id="viewByCategory" onclick="setViewMode('category')" data-i18n="viewByCategory">依物品分類</button>
@@ -657,10 +633,99 @@
   <div class="json-toggle" id="jsonToggle" onclick="toggleJsonView()" style="display:none">▾ 顯示原始 JSON 資料</div>
   <div class="json-box" id="jsonBox"></div>
 
+  </section>
+
+  <!-- ===== Tab：tab-settings ===== -->
+  <section class="tab-section" id="tab-settings" style="display:none">
+  <div class="settings-toggle" onclick="toggleSettings()">
+    <div class="settings-toggle-left">
+      <span class="settings-icon">⚙️</span>
+      <span class="settings-title" data-i18n="settingsTitle">AI 設定</span>
+      <span class="settings-status missing" id="settingsStatus">未設定</span>
+    </div>
+    <span class="settings-caret open" id="settingsCaret">▾</span>
+  </div>
+
+  <div class="settings-panel show" id="settingsPanel">
+    <div class="provider-grid">
+      <button class="provider-btn" id="provider-claude" onclick="selectProvider('claude')">
+        <span class="provider-btn-name">Claude</span>
+        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
+      </button>
+      <button class="provider-btn" id="provider-gemini" onclick="selectProvider('gemini')">
+        <span class="provider-btn-name">Gemini</span>
+        <span class="provider-btn-cors" data-i18n="providerDirect">✓ 可直連</span>
+      </button>
+      <button class="provider-btn" id="provider-deepseek" onclick="selectProvider('deepseek')">
+        <span class="provider-btn-name">DeepSeek</span>
+        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
+      </button>
+      <button class="provider-btn" id="provider-grok" onclick="selectProvider('grok')">
+        <span class="provider-btn-name">Grok</span>
+        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
+      </button>
+    </div>
+
+    <div class="settings-note" id="corsNote"></div>
+
+    <div class="settings-field">
+      <label class="settings-label" data-i18n="labelModel">模型</label>
+      <select class="settings-input" id="modelSelect" onchange="onModelChange()" style="font-family:'Inter',sans-serif; cursor:pointer;"></select>
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label">API Key</label>
+      <input type="password" class="settings-input" id="apiKeyInput" placeholder="貼上你的 API Key" data-i18n-placeholder="apiKeyPlaceholder">
+      <a class="get-key-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" data-i18n="getGeminiKey">取得 Gemini API Key</a>
+    </div>
+
+    <div class="settings-field" id="proxyField" style="display:none">
+      <label class="settings-label" data-i18n="labelProxy">代理伺服器網址（需要代理的供應商）</label>
+      <input type="text" class="settings-input" id="proxyInput" placeholder="例如：http://localhost:3000/api/chat" data-i18n-placeholder="proxyPlaceholder">
+    </div>
+
+    <div class="settings-note" data-i18n="settingsNoteKey">
+      API Key 僅儲存在你瀏覽器的 localStorage，不會上傳到任何伺服器。重新整理頁面不會消失，但換瀏覽器或清除快取會消失。
+    </div>
+
+    <div class="settings-save-row">
+      <button class="settings-save-btn" onclick="saveSettings()" data-i18n="btnSaveSettings">儲存設定</button>
+      <button class="settings-clear-btn" onclick="clearSettings()" data-i18n="btnClearSettings">清除</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title" data-i18n="dataTitle">資料管理</div>
+    <div class="settings-actions">
+      <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJsonImport(event)">
+      <button class="log-btn" onclick="uploadJson()" data-i18n="btnImportJson">⬆ 匯入 JSON</button>
+      <button class="log-btn" onclick="downloadJson()" data-i18n="btnExportJson">⬇ 匯出 JSON</button>
+    </div>
+  </div>
+
   <div class="footer" data-i18n-html="footerHtml">
     語音與資料皆在瀏覽器本地處理，重新整理頁面將清除紀錄（建議透過匯出 JSON 備份）。<br>
     本工具使用瀏覽器原生語音辨識 + Claude AI 語意解析，僅供技術驗證用途。
   </div>
+  </section>
+
+  <!-- ===== 底部 Tab Bar ===== -->
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" data-tab="add" onclick="switchTab('add')">
+        <span class="tab-icon">📝</span>
+        <span class="tab-label" data-i18n="tabAdd">建檔</span>
+      </button>
+      <button class="tab-btn" data-tab="items" onclick="switchTab('items')">
+        <span class="tab-icon">📦</span>
+        <span class="tab-label" data-i18n="tabItems">記錄</span>
+      </button>
+      <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label" data-i18n="tabSettings">設定</span>
+      </button>
+    </div>
+  </nav>
 
 </div>
 
@@ -1078,7 +1143,10 @@
       promptLangLine: "請以繁體中文輸出所有文字內容（物品名稱、備註、位置描述等所有欄位值）。",
       cat0: "文具", cat1: "電子用品", cat2: "清潔用品", cat3: "廚房用品",
       cat4: "衛浴用品", cat5: "食品", cat6: "衣物", cat7: "工具",
-      cat8: "配件", cat9: "文件", cat10: "玩具", cat11: "其他"
+      cat8: "配件", cat9: "文件", cat10: "玩具", cat11: "其他",
+      tabAdd: "建檔", tabItems: "記錄", tabSettings: "設定",
+      dataTitle: "資料管理",
+      getGeminiKey: "取得 Gemini API Key"
     },
     'en': {
       docTitle: "HomeBase · Voice Inventory Demo",
@@ -1197,7 +1265,10 @@
       promptLangLine: "Output ALL text content in English (item names, notes, location descriptions, and all other field values).",
       cat0: "Stationery", cat1: "Electronics", cat2: "Cleaning supplies", cat3: "Kitchenware",
       cat4: "Bathroom supplies", cat5: "Food", cat6: "Clothing", cat7: "Tools",
-      cat8: "Accessories", cat9: "Documents", cat10: "Toys", cat11: "Other"
+      cat8: "Accessories", cat9: "Documents", cat10: "Toys", cat11: "Other",
+      tabAdd: "Add", tabItems: "Items", tabSettings: "Settings",
+      dataTitle: "Data",
+      getGeminiKey: "Get Gemini API Key"
     }
   };
 
@@ -1920,6 +1991,17 @@ ${t('promptLangLine')}`;
       <div class="search-result-found">${hits}</div>
     `;
     resultBox.classList.add('show');
+  }
+
+  // ===== Tab 切換（顯示/隱藏 section，不 reload） =====
+  function switchTab(name) {
+    document.querySelectorAll('.tab-section').forEach(function (s) {
+      s.style.display = (s.id === 'tab-' + name) ? '' : 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    window.scrollTo(0, 0);
   }
 
   // Init
