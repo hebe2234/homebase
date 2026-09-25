@@ -585,6 +585,85 @@
     border: 1px solid var(--border); border-radius: 6px; background: var(--card);
     color: inherit; max-width: 60%;
   }
+
+  /* ===== 空間掃描（拍照 → AI 辨識） ===== */
+  .scan-cta {
+    display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+    width: 100%; padding: 0.9rem; margin-bottom: 0.6rem;
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    font-family: inherit; font-size: 1rem; font-weight: 700; cursor: pointer;
+  }
+  .scan-cta:active { opacity: 0.9; }
+  .scan-cta:disabled { opacity: 0.6; cursor: default; }
+  .scan-manual-row { text-align: center; margin-bottom: 1rem; }
+  .scan-manual-link {
+    font-size: 0.75rem; color: var(--muted); text-decoration: underline;
+    cursor: pointer; background: none; border: none; font-family: inherit; padding: 0.2rem;
+  }
+  .scan-loading {
+    display: none; text-align: center; padding: 1rem; font-size: 0.85rem; color: var(--muted);
+  }
+  .scan-loading.show { display: block; }
+  .scan-error {
+    display: none; background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2;
+    border-radius: 6px; padding: 0.7rem 0.9rem; font-size: 0.82rem; margin-bottom: 0.8rem;
+    line-height: 1.6;
+  }
+  .scan-error.show { display: block; }
+  .scan-preview {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; margin-bottom: 1rem;
+  }
+  .scan-preview-photo {
+    width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 0.8rem;
+  }
+  .scan-field { margin-bottom: 0.7rem; }
+  .scan-field label {
+    display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted);
+    margin-bottom: 0.25rem; letter-spacing: 0.03em;
+  }
+  .scan-field input[type="text"] {
+    width: 100%; font-family: inherit; font-size: 0.9rem; padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--soft); color: inherit;
+    box-sizing: border-box;
+  }
+  .scan-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .scan-chip {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: var(--accent-light); border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 20px; padding: 0.25rem 0.35rem 0.25rem 0.7rem; font-size: 0.8rem;
+  }
+  .scan-chip button {
+    background: none; border: none; color: inherit; cursor: pointer;
+    font-size: 0.85rem; padding: 0 0.25rem; line-height: 1;
+  }
+  .scan-chip-add { display: flex; gap: 0.4rem; margin-top: 0.45rem; }
+  .scan-chip-add input {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 0.82rem; padding: 0.4rem 0.55rem;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--soft); color: inherit;
+  }
+  .scan-item-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.35rem 0; font-size: 0.85rem;
+  }
+  .scan-item-row input[type="checkbox"] { width: 1rem; height: 1rem; flex-shrink: 0; }
+  .scan-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scan-item-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; }
+  .scan-item-del:hover { color: var(--error); }
+  .scan-empty-note { font-size: 0.8rem; color: var(--muted); padding: 0.3rem 0; }
+  .scan-actions { display: flex; gap: 0.6rem; margin-top: 0.9rem; }
+  .scan-confirm {
+    flex: 1; background: var(--accent); color: #fff; border: none; border-radius: 6px;
+    padding: 0.7rem; font-size: 0.9rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .scan-confirm:disabled { opacity: 0.55; cursor: default; }
+  .scan-cancel {
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.7rem 1rem; font-size: 0.9rem; color: var(--muted); cursor: pointer; font-family: inherit;
+  }
+  .scan-created-note {
+    font-size: 0.8rem; color: var(--accent); font-weight: 700; margin-bottom: 0.6rem;
+  }
 </style>
 </head>
 <body>
@@ -656,12 +735,23 @@
   <div class="log-header">
     <span class="log-title" data-i18n="spacesTitle">我的空間</span>
   </div>
-  <div class="space-add-row">
+  <!-- 拍照辨識空間：主要建立流程 -->
+  <button class="scan-cta" id="scanRoomBtn" onclick="triggerSpaceScan()">
+    <span>📷</span><span data-i18n="scanRoomCta">拍照辨識空間</span>
+  </button>
+  <div class="scan-loading" id="scanLoading"><span data-i18n="scanLoading">AI 辨識空間中…</span></div>
+  <div class="scan-error" id="scanErrorBox"></div>
+  <div id="scanPreview"></div>
+  <div class="scan-manual-row">
+    <button class="scan-manual-link" onclick="toggleManualAddSpace()" data-i18n="scanManualLink">手動新增房間</button>
+  </div>
+  <div class="space-add-row" id="manualAddRow" style="display:none">
     <input type="text" class="search-input" id="spaceNameInput" data-i18n-placeholder="spaceNamePh" placeholder="房間名稱，例如：客廳" onkeydown="if(event.key==='Enter')addSpace()">
     <button class="log-btn" onclick="addSpace()" data-i18n="btnAddSpace">＋ 新增房間</button>
   </div>
   <div id="spacesContainer"></div>
   <input type="file" id="spacePhotoInput" accept="image/*" style="display:none" onchange="handleSpacePhotoSelect(event)">
+  <input type="file" id="spaceScanInput" accept="image/*" capture="environment" style="display:none" onchange="handleSpaceScanSelect(event)">
   </section>
 
   <!-- ===== Tab：tab-items ===== -->
@@ -1282,7 +1372,25 @@
       reviewZone: "區域",
       optNoSpace: "— 不指定 —",
       spaceFilterAll: "全部空間",
-      spaceFilterLabel: "空間篩選"
+      spaceFilterLabel: "空間篩選",
+      scanRoomCta: "拍照辨識空間",
+      scanManualLink: "手動新增房間",
+      scanLoading: "AI 辨識空間中…",
+      scanRoomNameLabel: "房間名稱",
+      scanRoomTypeLabel: "房間類型",
+      scanZonesLabel: "辨識到的區域",
+      scanAddZonePh: "新增區域…",
+      scanItemsLabel: "可見物品",
+      scanAddItemPh: "新增物品…",
+      scanConfirmSpace: "確認建立空間",
+      scanCancel: "取消",
+      scanAddToReview: "加入待審核",
+      scanCreated: "✓ 已建立",
+      scanClose: "關閉",
+      scanDefaultRoom: "未命名房間",
+      scanSourceLabel: "（來自空間辨識）",
+      scanErrEmpty: "AI 未能辨識出這個空間，請換個角度重拍一次。",
+      scanNoItems: "沒有辨識到清楚可見的物品"
     },
     'en': {
       docTitle: "HomeBase · Voice Inventory Demo",
@@ -1428,7 +1536,25 @@
       reviewZone: "Zone",
       optNoSpace: "— None —",
       spaceFilterAll: "All Spaces",
-      spaceFilterLabel: "Space filter"
+      spaceFilterLabel: "Space filter",
+      scanRoomCta: "Scan Room",
+      scanManualLink: "Add room manually",
+      scanLoading: "AI is recognizing the room…",
+      scanRoomNameLabel: "Room name",
+      scanRoomTypeLabel: "Room type",
+      scanZonesLabel: "Detected zones",
+      scanAddZonePh: "Add zone…",
+      scanItemsLabel: "Visible items",
+      scanAddItemPh: "Add item…",
+      scanConfirmSpace: "Create Space",
+      scanCancel: "Cancel",
+      scanAddToReview: "Add to Review",
+      scanCreated: "✓ Created",
+      scanClose: "Close",
+      scanDefaultRoom: "Unnamed room",
+      scanSourceLabel: "(from room scan)",
+      scanErrEmpty: "AI couldn't recognize this room. Try another angle.",
+      scanNoItems: "No clearly visible items detected"
     }
   };
 
@@ -1546,6 +1672,7 @@
     renderHistory();
     renderLog();
     renderSpaces();
+    if (typeof scanState !== 'undefined' && scanState) renderScanPreview();
     if (document.getElementById('reviewOverlay').classList.contains('show')) renderReviewQueue();
   }
 
@@ -2401,6 +2528,255 @@ ${t('promptLangLine')}`;
     sp.photo = null;
     saveSpaces();
     renderSpaces();
+  }
+
+  // ===== 空間掃描：拍照 → AI 辨識空間 =====
+  // scanState = { photoDataUrl, photoBase64, roomName, roomType, zones: [],
+  //               visibleItems: [{name, checked}], spaceId, created, startedAt, submittedAt }
+  let scanState = null;
+
+  function triggerSpaceScan() {
+    if (!hasApiKey()) { showApiKeyReminder(); return; }
+    hideScanError();
+    document.getElementById('spaceScanInput').click();
+  }
+
+  function toggleManualAddSpace() {
+    const row = document.getElementById('manualAddRow');
+    row.style.display = row.style.display === 'none' ? '' : 'none';
+  }
+
+  function showScanError(msg) {
+    const box = document.getElementById('scanErrorBox');
+    box.textContent = msg;
+    box.classList.add('show');
+  }
+  function hideScanError() {
+    document.getElementById('scanErrorBox').classList.remove('show');
+  }
+
+  function handleSpaceScanSelect(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    hideScanError();
+    // 沿用房間照片的壓縮規格：最長邊 800px、JPEG 0.7
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        runSpaceScan(dataUrl, dataUrl.split(',')[1]);
+      };
+      img.onerror = () => showScanError(t('scanErrEmpty'));
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function runSpaceScan(dataUrl, base64) {
+    const loading = document.getElementById('scanLoading');
+    const ctaBtn = document.getElementById('scanRoomBtn');
+    loading.classList.add('show');
+    ctaBtn.disabled = true;
+    document.getElementById('scanPreview').innerHTML = '';
+    scanState = null;
+    const submittedAt = new Date().toISOString();
+
+    const prompt = `你是一個家庭空間辨識 AI。使用者拍了一張房間的照片，請辨識這是什麼房間、有哪些家具或收納區域，並列出清楚可見的物品。
+
+使用者語言：${t('promptLangName')}
+${t('promptLangLine')}
+
+請以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記）：
+{
+  "roomName": "房間名稱，例如：客廳",
+  "roomType": "房間類型，例如：客廳/臥室/廚房/書房/浴室/陽台/儲藏室",
+  "zones": ["家具或區域名稱1", "家具或區域名稱2"],
+  "visibleItems": ["清楚可見的物品名稱1", "清楚可見的物品名稱2"]
+}
+
+規則：
+- roomName 用簡短口語的房間名稱
+- zones 列出照片中可見的主要家具或收納區域（例如：沙發、電視櫃、書桌、衣櫃），最多 8 個，只列有把握的
+- visibleItems 只列清楚可見、能確定名稱的物品，模糊不清的不要硬猜；若無則回傳空陣列`;
+
+    try {
+      // 走既有 callAI：gemini 直連，其他供應商經代理（簽名不變）
+      const rawText = await callAI(prompt, base64, 'image/jpeg');
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error(t('errNoJson') + rawText);
+      let parsed;
+      try { parsed = JSON.parse(jsonMatch[0]); }
+      catch (e) { throw new Error(t('errNoJson') + rawText); }
+
+      const str = v => (typeof v === 'string' ? v.trim() : '');
+      const rawName = str(parsed.roomName);
+      const roomType = str(parsed.roomType);
+      const zones = Array.isArray(parsed.zones)
+        ? parsed.zones.filter(z => typeof z === 'string').map(z => z.trim()).filter(Boolean).slice(0, 8)
+        : [];
+      const visibleItems = Array.isArray(parsed.visibleItems)
+        ? parsed.visibleItems.filter(v => typeof v === 'string').map(v => v.trim()).filter(Boolean)
+            .map(name => ({ name, checked: true }))
+        : [];
+
+      if (!rawName && !roomType && zones.length === 0 && visibleItems.length === 0) {
+        showScanError(t('scanErrEmpty'));
+        return;
+      }
+
+      scanState = {
+        photoDataUrl: dataUrl, photoBase64: base64,
+        roomName: rawName || roomType || t('scanDefaultRoom'),
+        roomType, zones, visibleItems,
+        spaceId: null, created: false,
+        startedAt: submittedAt, submittedAt
+      };
+      renderScanPreview();
+    } catch (err) {
+      showScanError(err && err.message ? err.message : String(err));
+    } finally {
+      loading.classList.remove('show');
+      ctaBtn.disabled = false;
+    }
+  }
+
+  function renderScanPreview() {
+    const box = document.getElementById('scanPreview');
+    if (!box) return;
+    if (!scanState) { box.innerHTML = ''; return; }
+    const s = scanState;
+    box.innerHTML = `
+    <div class="scan-preview">
+      ${s.created ? `<div class="scan-created-note">${t('scanCreated')}</div>` : ''}
+      <img class="scan-preview-photo" src="${s.photoDataUrl}" alt="">
+      <div class="scan-field">
+        <label>${t('scanRoomNameLabel')}</label>
+        <input type="text" value="${escapeAttr(s.roomName)}" oninput="scanState.roomName=this.value"${s.created ? ' disabled' : ''}>
+      </div>
+      <div class="scan-field">
+        <label>${t('scanRoomTypeLabel')}</label>
+        <input type="text" value="${escapeAttr(s.roomType)}" oninput="scanState.roomType=this.value"${s.created ? ' disabled' : ''}>
+      </div>
+      <div class="scan-field">
+        <label>${t('scanZonesLabel')}</label>
+        <div class="scan-chips">
+          ${s.zones.map((z, i) => `<span class="scan-chip">${escapeHtml(z)}${s.created ? '' : `<button onclick="scanRemoveZone(${i})">✕</button>`}</span>`).join('')}
+        </div>
+        ${s.created ? '' : `<div class="scan-chip-add">
+          <input type="text" id="scanZoneInput" placeholder="${escapeAttr(t('scanAddZonePh'))}" onkeydown="if(event.key==='Enter')scanAddZone()">
+          <button class="log-btn" onclick="scanAddZone()">＋</button>
+        </div>`}
+      </div>
+      <div class="scan-field">
+        <label>${t('scanItemsLabel')}</label>
+        ${s.visibleItems.length === 0
+          ? `<div class="scan-empty-note">${t('scanNoItems')}</div>`
+          : s.visibleItems.map((it, i) => `
+            <div class="scan-item-row">
+              <input type="checkbox"${it.checked ? ' checked' : ''} onchange="scanState.visibleItems[${i}].checked=this.checked">
+              <span class="scan-item-name">${escapeHtml(it.name)}</span>
+              <button class="scan-item-del" onclick="scanRemoveItem(${i})">✕</button>
+            </div>`).join('')}
+        <div class="scan-chip-add">
+          <input type="text" id="scanItemInput" placeholder="${escapeAttr(t('scanAddItemPh'))}" onkeydown="if(event.key==='Enter')scanAddItem()">
+          <button class="log-btn" onclick="scanAddItem()">＋</button>
+        </div>
+      </div>
+      <div class="scan-actions">
+        ${s.created
+          ? `<button class="scan-cancel" onclick="cancelScan()">${t('scanClose')}</button>`
+          : `<button class="scan-cancel" onclick="cancelScan()">${t('scanCancel')}</button>
+             <button class="scan-confirm" onclick="confirmCreateSpace()">${t('scanConfirmSpace')}</button>`}
+        ${s.visibleItems.length > 0 ? `<button class="scan-confirm" onclick="addScanItemsToReview()">${t('scanAddToReview')}</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function scanRemoveZone(i) {
+    if (!scanState || scanState.created) return;
+    scanState.zones.splice(i, 1);
+    renderScanPreview();
+  }
+  function scanAddZone() {
+    if (!scanState || scanState.created) return;
+    const input = document.getElementById('scanZoneInput');
+    const name = input.value.trim();
+    if (!name || scanState.zones.length >= 8) return;
+    scanState.zones.push(name);
+    renderScanPreview();
+  }
+  function scanRemoveItem(i) {
+    if (!scanState) return;
+    scanState.visibleItems.splice(i, 1);
+    renderScanPreview();
+  }
+  function scanAddItem() {
+    if (!scanState) return;
+    const input = document.getElementById('scanItemInput');
+    const name = input.value.trim();
+    if (!name) return;
+    scanState.visibleItems.push({ name, checked: true });
+    renderScanPreview();
+  }
+  function cancelScan() {
+    scanState = null;
+    document.getElementById('scanPreview').innerHTML = '';
+    hideScanError();
+  }
+
+  function confirmCreateSpace() {
+    if (!scanState || scanState.created) return;
+    const nameInput = document.querySelector('#scanPreview .scan-field input');
+    const name = (nameInput ? nameInput.value.trim() : scanState.roomName) || t('scanDefaultRoom');
+    const sp = {
+      id: uid('sp_'),
+      name: name,
+      photo: scanState.photoDataUrl,
+      zones: scanState.zones.map(z => ({ id: uid('z_'), name: z }))
+    };
+    spaces.push(sp);
+    saveSpaces();
+    scanState.spaceId = sp.id;
+    scanState.created = true;
+    scanState.roomName = name;
+    renderSpaces();
+    renderScanPreview();
+  }
+
+  function addScanItemsToReview() {
+    if (!scanState) return;
+    // 若空間還沒建立，先用預覽上的編輯內容建立
+    if (!scanState.created) confirmCreateSpace();
+    const picked = scanState.visibleItems.filter(it => it.checked && it.name.trim());
+    if (picked.length === 0) return;
+    const sp = findSpace(scanState.spaceId);
+    const roomName = sp ? sp.name : scanState.roomName;
+    const newEntries = picked.map(it => ({
+      location_id: '',
+      location_label: roomName,
+      item: it.name.trim(),
+      category: '',
+      quantity: '',
+      unit: '',
+      note: '',
+      placed_at_raw: '',
+      spaceId: scanState.spaceId || '',
+      zoneId: ''
+    }));
+    openReviewQueue(newEntries, t('scanSourceLabel'), 'photo',
+      { startedAt: scanState.startedAt, submittedAt: scanState.submittedAt });
   }
 
   // 記錄 Tab 的空間篩選
