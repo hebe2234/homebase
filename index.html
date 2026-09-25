@@ -265,6 +265,32 @@
     padding: 0.7rem; font-size: 0.9rem; color: var(--muted); cursor: pointer; font-family: inherit;
   }
 
+  /* 照片定位放大 modal（canvas 即時裁切，不存檔） */
+  .photozoom-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(26,26,26,0.72);
+    z-index: 120; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .photozoom-overlay.show { display: flex; }
+  .photozoom-sheet {
+    background: var(--soft); width: 100%; max-width: 620px; max-height: 92vh;
+    border-radius: 12px; padding: 1rem 1rem 1.2rem; overflow-y: auto; text-align: center;
+  }
+  .photozoom-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+  .photozoom-title { font-weight: 700; font-size: 1rem; text-align: left; }
+  .photozoom-close {
+    background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted);
+    width: 2rem; height: 2rem; font-size: 0.9rem; cursor: pointer; flex-shrink: 0;
+  }
+  #photoZoomCanvas { max-width: 100%; border-radius: 8px; cursor: zoom-in; touch-action: manipulation; }
+  .photozoom-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
+  .photozoom-note {
+    font-size: 0.8rem; color: var(--muted); background: var(--bg); border-radius: 6px;
+    padding: 0.5rem 0.7rem; margin-top: 0.6rem; text-align: left;
+  }
+  .photo-marker {
+    background: none; border: none; cursor: pointer; font-size: 0.95rem; padding: 0 0.15rem; flex-shrink: 0;
+  }
+
   .review-sheet {
     background: var(--soft); width: 100%; max-width: 640px; max-height: 88vh;
     border-radius: 12px 12px 0 0; overflow-y: auto; padding: 1.25rem 1.1rem 1.5rem;
@@ -862,6 +888,10 @@
       <button class="log-btn" onclick="uploadJson()" data-i18n="btnImportJson">⬆ 匯入 JSON</button>
       <button class="log-btn" onclick="downloadJson()" data-i18n="btnExportJson">⬇ 匯出 JSON</button>
     </div>
+    <div class="settings-note" id="photoStoreInfo" style="margin-top:0.5rem"></div>
+    <div class="settings-actions" style="margin-top:0.4rem">
+      <button class="log-btn" onclick="clearPhotoStore()" data-i18n="photoStoreClear">清理照片庫</button>
+    </div>
   </div>
 
   <div class="settings-section">
@@ -1002,6 +1032,18 @@
       <button class="apikey-later" onclick="closeApiKeyReminder()" data-i18n="needKeyLater">稍後再說</button>
       <button class="apikey-go" onclick="goToApiSettings()" data-i18n="needKeyGo">前往設定</button>
     </div>
+  </div>
+</div>
+
+<div class="photozoom-overlay" id="photoZoomOverlay" onclick="if(event.target===this)closePhotoZoom()">
+  <div class="photozoom-sheet">
+    <div class="photozoom-head">
+      <div class="photozoom-title" id="photoZoomTitle"></div>
+      <button class="photozoom-close" onclick="closePhotoZoom()">✕</button>
+    </div>
+    <div id="photoZoomBody"></div>
+    <div class="photozoom-hint" id="photoZoomHint"></div>
+    <div class="photozoom-note" id="photoZoomNote" style="display:none"></div>
   </div>
 </div>
 
@@ -1508,6 +1550,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       cloudSwitched: "已切換到雲端檔 {file}",
       cloudServerBtn: "🔍 瀏覽伺服器檔案",
       cloudServerEmpty: "伺服器上沒有其他未綁定的檔案",
+      photoZoomView: "查看照片定位",
+      photoZoomCleaned: "原圖已清理，僅保留定位資訊",
+      photoZoomLoadFail: "照片載入失敗",
+      photoZoomHintCrop: "🔍 裁切放大 — 點圖片查看整張原圖",
+      photoZoomHintFull: "🖼️ 整張原圖 — 點圖片回到裁切放大",
+      photoStoreInfo: "照片庫佔用：{size}（{n} 張）",
+      photoStoreClear: "清理照片庫",
+      photoStoreClearConfirm: "確定要清理照片庫嗎？物品的定位框會保留，但之後將無法查看照片。",
+      cloudWarnBigPayload: "⚠️ 雲端資料超過 7MB（含照片庫），建議先到「設定 → 資料管理」清理照片庫再同步",
     },
     'en': {
       docTitle: "HomeBase",
@@ -1709,7 +1760,16 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       cloudSwitchNeedPw: "Enter this file's cloud password",
       cloudSwitched: "Switched to cloud file {file}",
       cloudServerBtn: "🔍 Browse server files",
-      cloudServerEmpty: "No other unlinked files on the server"
+      cloudServerEmpty: "No other unlinked files on the server",
+      photoZoomView: "View photo location",
+      photoZoomCleaned: "Original photo was cleaned up; only location info remains",
+      photoZoomLoadFail: "Failed to load photo",
+      photoZoomHintCrop: "🔍 Cropped zoom — tap image to see the full photo",
+      photoZoomHintFull: "🖼️ Full photo — tap image to return to cropped zoom",
+      photoStoreInfo: "Photo library: {size} ({n} photos)",
+      photoStoreClear: "Clear photo library",
+      photoStoreClearConfirm: "Clear the photo library? Location boxes on items will be kept, but photos will no longer be viewable.",
+      cloudWarnBigPayload: "⚠️ Cloud payload exceeds 7MB (includes photo library); consider clearing the photo library in Settings → Data first",
     }
   };
 
@@ -1825,6 +1885,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     if (document.getElementById('reviewOverlay').classList.contains('show')) renderReviewQueue();
     if (typeof renderPhotoPreview === 'function') renderPhotoPreview();
     if (typeof renderCloudSection === 'function') renderCloudSection();
+    if (typeof updatePhotoStoreInfo === 'function') updatePhotoStoreInfo();
   }
 
   function showError(msg) {
@@ -2202,6 +2263,7 @@ ${entrySchema}
         <div class="tree-item-row">
           ${currentViewMode === 'category' && e.location_id ? `<span class="tree-item-loc">${e.location_id}</span>` : ''}
           <span class="tree-item-name">${e.item}</span>${spaceBadge(e)}
+          ${e.photoId && e.bbox ? `<button class="photo-marker" onclick="openPhotoZoom(${e._idx})" title="${escapeAttr(t('photoZoomView'))}">🖼️</button>` : ''}
           ${e.quantity !== null && e.quantity !== undefined ? `<span class="tree-item-qty">${e.quantity}${e.unit ? ' ' + e.unit : ''}</span>` : ''}
           ${e.note ? `<div class="tree-item-note">${t('treeNotePrefix')}${e.note}</div>` : ''}
         </div>
@@ -2467,6 +2529,97 @@ ${t('promptLangLine')}`;
     });
   }
 
+  // ===== 照片庫（Photo Store）：原圖去重儲存，一張原圖供多件物品共用座標定位 =====
+  // 只存原圖（最長邊 1024px、JPEG 0.72）；裁切放大圖一律用 canvas 即時生成、不存檔
+  const PHOTOS_KEY = 'homebase_photos';
+  const PHOTO_STORE_MAX = 12;
+  let photoStore = { order: [], map: {} }; // order: [id...] 舊→新；map: {id: dataURL}
+
+  function photoStoreLoad() {
+    photoStore = { order: [], map: {} };
+    try {
+      const saved = JSON.parse(localStorage.getItem(PHOTOS_KEY) || 'null');
+      if (saved && Array.isArray(saved.order) && saved.map && typeof saved.map === 'object') {
+        const order = saved.order
+          .filter(id => typeof id === 'string' && typeof saved.map[id] === 'string' && saved.map[id].indexOf('data:image') === 0)
+          .slice(-PHOTO_STORE_MAX);
+        const map = {};
+        order.forEach(id => { map[id] = saved.map[id]; });
+        photoStore = { order: order, map: map };
+      }
+    } catch (e) { photoStore = { order: [], map: {} }; }
+  }
+  function photoStoreSave() {
+    try { localStorage.setItem(PHOTOS_KEY, JSON.stringify(photoStore)); } catch (e) { /* ignore: quota 滿 */ }
+  }
+  function photoStoreGet(id) { return (id && photoStore.map[id]) || null; }
+  // 存入一張原圖 dataURL，回傳 id；LRU：超過上限淘汰最舊
+  function photoStorePut(dataUrl) {
+    const id = 'ph_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    photoStore.map[id] = dataUrl;
+    photoStore.order.push(id);
+    while (photoStore.order.length > PHOTO_STORE_MAX) {
+      const old = photoStore.order.shift();
+      delete photoStore.map[old];
+    }
+    photoStoreSave();
+    updatePhotoStoreInfo();
+    return id;
+  }
+  // 原圖壓縮到最長邊 1024px、JPEG 0.72 後存入，回傳 id（Promise）
+  function storePhoto1024(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const MAX = 1024;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(photoStorePut(canvas.toDataURL('image/jpeg', 0.72)));
+        } catch (e) { reject(e); }
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+  function photoStoreBytes() {
+    let n = 0;
+    for (const id of photoStore.order) n += (photoStore.map[id] || '').length;
+    return n;
+  }
+  // 雲端還原：驗證後載入照片庫（上限 12 張，超過丟最舊）
+  function photoStoreImport(data) {
+    try {
+      if (!data || !Array.isArray(data.order) || !data.map || typeof data.map !== 'object') return;
+      const order = data.order
+        .filter(id => typeof id === 'string' && typeof data.map[id] === 'string' && data.map[id].indexOf('data:image') === 0)
+        .slice(-PHOTO_STORE_MAX);
+      const map = {};
+      order.forEach(id => { map[id] = data.map[id]; });
+      photoStore = { order: order, map: map };
+      photoStoreSave();
+    } catch (e) { /* ignore */ }
+    updatePhotoStoreInfo();
+  }
+  function updatePhotoStoreInfo() {
+    const el = document.getElementById('photoStoreInfo');
+    if (!el) return;
+    el.textContent = t('photoStoreInfo', { size: cloudFmtSize(photoStoreBytes()), n: photoStore.order.length });
+  }
+  function clearPhotoStore() {
+    if (!confirm(t('photoStoreClearConfirm'))) return;
+    photoStore = { order: [], map: {} };
+    photoStoreSave();
+    updatePhotoStoreInfo();
+    markCloudDirty(); // 照片庫清空 → 雲端同步排程（下次 payload 變小）
+  }
+
   // 區域名稱 → zoneId（比對時忽略前後空白）；找不到回傳空字串
   function resolveZoneId(space, zoneName) {
     if (!space || !zoneName) return '';
@@ -2527,6 +2680,7 @@ ${refSection}
 - roomName：簡短口語的房間名稱；roomType：客廳/臥室/廚房/書房/浴室/陽台/儲藏室等類型
 - zones：新照片中可見的主要家具或收納區域名稱（例如：流理台、衣櫃、書桌），最多 8 個
 - items：陣列，每項為 {"name": "物品名稱", "zone": "對應 zones 中的區域名稱（無法判斷則空字串）", "qty": 數量數字（數得出才填，否則 null）, "confidence": "high | medium | low", "note": "不確定原因短句（有把握則空字串）"}
+- 每件物品加 "bbox": [ymin, xmin, ymax, xmax]，0-1000 正規化整數座標（相對整張圖，左上角為原點），框住該物品本體；若看不清或無法定位，bbox 填 null
 - 每件物品都要評估信心度：
   - high：清楚可見、確定是什麼物品
   - medium：看得到但有疑慮（例如部分被遮擋、角度奇怪、可能是 A 也可能是 B）
@@ -2544,7 +2698,7 @@ ${t('promptLangLine')}
   "roomName": "房間名稱",
   "roomType": "房間類型",
   "zones": ["區域1", "區域2"],
-  "items": [{"name": "物品名稱", "zone": "區域名稱", "qty": 2, "confidence": "high", "note": ""}]
+  "items": [{"name": "物品名稱", "zone": "區域名稱", "qty": 2, "confidence": "high", "note": "", "bbox": [120, 300, 450, 620]}]
 }`;
   }
 
@@ -2594,6 +2748,15 @@ ${t('promptLangLine')}
         const c = String(v || '').trim().toLowerCase();
         return c === 'high' || c === 'medium' || c === 'low' ? c : 'medium';
       };
+      // bbox: [ymin, xmin, ymax, xmax]，0-1000 正規化整數；非法 → null（不影響其他欄位）
+      const bboxOf = v => {
+        if (!Array.isArray(v) || v.length !== 4) return null;
+        const n = v.map(Number);
+        if (n.some(x => !Number.isInteger(x) || x < 0 || x > 1000)) return null;
+        const ymin = n[0], xmin = n[1], ymax = n[2], xmax = n[3];
+        if (!(ymin < ymax && xmin < xmax)) return null;
+        return n;
+      };
       const items = Array.isArray(parsed.items)
         ? parsed.items.filter(it => it && typeof it === 'object').map(it => {
             const iconf = confOf(it.confidence);
@@ -2604,6 +2767,7 @@ ${t('promptLangLine')}
               qty: (it.qty === null || it.qty === undefined || it.qty === '') ? '' : Number(it.qty),
               confidence: iconf,
               note: str(it.note).slice(0, 140),
+              bbox: bboxOf(it.bbox),
               checked: iconf !== 'low' // low 預設不勾選；high/medium 預設勾選
             };
           }).filter(it => it.name).slice(0, 60)
@@ -2807,6 +2971,8 @@ ${t('promptLangLine')}
             placed_at_raw: '',
             spaceId: spaceId,
             zoneId: zoneId,
+            bbox: it.bbox ? it.bbox.slice() : null, // [ymin,xmin,ymax,xmax] 0-1000；無定位則 null
+            photoId: null, // 下方統一寫入：有 bbox 的物品共用同一張原圖
             input_started_at: st.startedAt,
             submitted_at: st.submittedAt,
             confirmed_at: now,
@@ -2814,6 +2980,14 @@ ${t('promptLangLine')}
             raw_transcript: t('photoSourceLabel')
           };
         });
+      // 照片庫：本次原圖只存一筆（最長邊 1024px、JPEG 0.72），有 bbox 的物品共用同一 photoId
+      const withBbox = finalized.filter(e => e.bbox);
+      if (withBbox.length > 0) {
+        try {
+          const pid = await storePhoto1024(st.newPhotoDataUrl);
+          withBbox.forEach(e => { e.photoId = pid; });
+        } catch (err) { /* 存圖失敗：物品保留 bbox，檢視時顯示載入失敗 */ }
+      }
       finalized.forEach(e => entries.push(e));
       markCloudDirty(); // 物品新增 → 雲端同步排程
       if (finalized.length > 0) {
@@ -2837,6 +3011,94 @@ ${t('promptLangLine')}
     } finally {
       photoConfirming = false;
     }
+  }
+
+  // ===== 照片定位放大：點物品 → canvas 即時裁切＋標框（只讀原圖＋座標，不存檔） =====
+  let photoZoomState = null; // {img, bbox:[ymin,xmin,ymax,xmax], view:'crop'|'full'}
+
+  function openPhotoZoom(entryIdx) {
+    const e = entries[entryIdx];
+    if (!e || !e.photoId || !e.bbox) return;
+    const title = document.getElementById('photoZoomTitle');
+    const body = document.getElementById('photoZoomBody');
+    const hint = document.getElementById('photoZoomHint');
+    const noteEl = document.getElementById('photoZoomNote');
+    title.textContent = e.item || '';
+    noteEl.style.display = 'none';
+    hint.textContent = '';
+    const dataUrl = photoStoreGet(e.photoId);
+    if (!dataUrl) {
+      // 原圖已被清理（LRU 淘汰或手動清理）：bbox 資訊保留，只顯示提示
+      body.innerHTML = `<div class="settings-note warn" style="padding:1.5rem 1rem;">${escapeHtml(t('photoZoomCleaned'))}</div>`;
+      document.getElementById('photoZoomOverlay').classList.add('show');
+      return;
+    }
+    body.innerHTML = `<div class="settings-note">${escapeHtml(t('cloudHistoryLoading'))}</div>`;
+    const img = new Image();
+    img.onload = () => {
+      photoZoomState = { img: img, bbox: e.bbox.slice(), view: 'crop' };
+      if (e.note) { noteEl.textContent = e.note; noteEl.style.display = 'block'; }
+      drawPhotoZoom();
+      document.getElementById('photoZoomOverlay').classList.add('show');
+    };
+    img.onerror = () => {
+      body.innerHTML = `<div class="settings-note warn" style="padding:1.5rem 1rem;">${escapeHtml(t('photoZoomLoadFail'))}</div>`;
+      document.getElementById('photoZoomOverlay').classList.add('show');
+    };
+    img.src = dataUrl;
+  }
+
+  function closePhotoZoom() {
+    document.getElementById('photoZoomOverlay').classList.remove('show');
+    photoZoomState = null;
+  }
+
+  function drawPhotoZoom() {
+    const st = photoZoomState;
+    if (!st) return;
+    const body = document.getElementById('photoZoomBody');
+    const hint = document.getElementById('photoZoomHint');
+    const W = st.img.naturalWidth, H = st.img.naturalHeight;
+    if (!W || !H) return;
+    const ymin = st.bbox[0], xmin = st.bbox[1], ymax = st.bbox[2], xmax = st.bbox[3];
+    const bx0 = xmin / 1000 * W, by0 = ymin / 1000 * H;
+    const bx1 = xmax / 1000 * W, by1 = ymax / 1000 * H;
+    let sx, sy, sw, sh;
+    if (st.view === 'crop') {
+      // 以 bbox 為中心向外擴 25% padding，夾在圖邊界內不越界
+      const padX = (bx1 - bx0) * 0.25, padY = (by1 - by0) * 0.25;
+      sx = Math.max(0, bx0 - padX);
+      sy = Math.max(0, by0 - padY);
+      const ex1 = Math.min(W, bx1 + padX), ey1 = Math.min(H, by1 + padY);
+      sw = Math.max(1, ex1 - sx);
+      sh = Math.max(1, ey1 - sy);
+    } else {
+      sx = 0; sy = 0; sw = W; sh = H;
+    }
+    const maxW = Math.min(window.innerWidth * 0.86, 560);
+    const maxH = window.innerHeight * 0.55;
+    const scale = Math.min(maxW / sw, maxH / sh);
+    body.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.id = 'photoZoomCanvas';
+    canvas.width = Math.max(1, Math.round(sw * scale));
+    canvas.height = Math.max(1, Math.round(sh * scale));
+    canvas.onclick = () => {
+      photoZoomState.view = photoZoomState.view === 'crop' ? 'full' : 'crop';
+      drawPhotoZoom();
+    };
+    body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(st.img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    // 標出 bbox 本體位置
+    const rx = (bx0 - sx) * scale, ry = (by0 - sy) * scale;
+    const rw = (bx1 - bx0) * scale, rh = (by1 - by0) * scale;
+    ctx.fillStyle = 'rgba(34,197,94,0.18)';
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = Math.max(2, Math.round(scale * 1.5));
+    ctx.strokeRect(rx, ry, rw, rh);
+    hint.textContent = t(st.view === 'crop' ? 'photoZoomHintCrop' : 'photoZoomHintFull');
   }
 
 
@@ -3151,7 +3413,8 @@ ${t('promptLangLine')}
       version: 1,
       exportedAt: new Date().toISOString(),
       entries: entries,
-      spaces: spaces
+      spaces: spaces,
+      photoStore: { order: photoStore.order, map: photoStore.map } // 定位原圖跟著雲端走
     };
   }
   function cloudSetStatus(msg) {
@@ -3192,7 +3455,11 @@ ${t('promptLangLine')}
     try {
       const filename = cloudEnsureFilename();
       if (!cloudPwMap[filename]) cloudPwMap[filename] = pw; // 首次建檔時把密碼欄的密碼綁到新檔
-      const data = await cloudEncrypt(pw, cloudBuildPayload());
+      const payload = cloudBuildPayload();
+      if (JSON.stringify(payload).length > 7 * 1024 * 1024) {
+        cloudSetError(t('cloudWarnBigPayload')); // 軟警告：仍嘗試上傳，不擋
+      }
+      const data = await cloudEncrypt(pw, payload);
       const j = await cloudFetch(CLOUD_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -3286,6 +3553,7 @@ ${t('promptLangLine')}
     const p = cloudVersionCache.payload;
     entries = Array.isArray(p.entries) ? p.entries : [];
     spaces = Array.isArray(p.spaces) ? p.spaces : [];
+    photoStoreImport(p.photoStore); // 還原版本時一併還原照片庫
     saveSpaces(); // 內含 markCloudDirty
     expandedGroups.clear();
     renderLog();
@@ -3300,6 +3568,7 @@ ${t('promptLangLine')}
   function cloudApplyPayload(payload) {
     entries = Array.isArray(payload.entries) ? payload.entries : [];
     spaces = Array.isArray(payload.spaces) ? payload.spaces : [];
+    photoStoreImport(payload.photoStore); // 照片庫跟著雲端走（多人共用定位圖）
     saveSpaces(); // 內含 markCloudDirty；綁定成功後會再把 dirty 清掉
     expandedGroups.clear();
     renderLog();
@@ -3556,7 +3825,9 @@ ${t('promptLangLine')}
   // Init
   document.addEventListener('DOMContentLoaded', () => {
     loadSpaces();
+    photoStoreLoad(); // 照片庫（定位原圖）
     applyLang(detectLang());
+    updatePhotoStoreInfo(); // 照片庫佔用顯示
     loadSettings();
     // 雲端同步初始化
     document.getElementById('cloudFreqSelect').value = cloudGetFreq();
