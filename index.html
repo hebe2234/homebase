@@ -664,6 +664,29 @@
   .scan-created-note {
     font-size: 0.8rem; color: var(--accent); font-weight: 700; margin-bottom: 0.6rem;
   }
+  .scan-loc-bar { margin-bottom: 0.8rem; }
+  .scan-ref-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .scan-new-badge {
+    font-size: 0.72rem; font-weight: 700; color: var(--accent);
+    background: var(--accent-light); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 0.2rem 0.6rem; white-space: nowrap; flex-shrink: 0;
+  }
+  .scan-item-note { font-size: 0.75rem; color: #8a5d1f; margin: -0.1rem 0 0.4rem 1.6rem; }
+  .conf-badge { font-size: 0.85rem; flex-shrink: 0; cursor: help; }
+
+  /* ===== 單一輸入列（聊天式：文字＋拍照） ===== */
+  .input-bar { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+  .input-bar-text {
+    flex: 1; min-width: 0; font: inherit; font-size: 0.95rem;
+    padding: 0.7rem 1rem; border: 1px solid var(--border); border-radius: 24px;
+    background: var(--card); color: inherit; box-sizing: border-box;
+  }
+  .input-bar-photo {
+    flex-shrink: 0; width: 3rem; height: 3rem; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--card);
+    font-size: 1.35rem; cursor: pointer; line-height: 1;
+  }
+  .input-bar-photo:active { opacity: 0.8; }
 
   /* ===== 雲端多檔切換＋分享 ===== */
   #cloudFileSelect { cursor: pointer; }
@@ -693,30 +716,22 @@
 
   <!-- ===== Tab：tab-add ===== -->
   <section class="tab-section" id="tab-add">
-  <div class="lang-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
-    <button class="lang-btn active" id="inputPhoto" onclick="setInputMode('photo')" data-i18n="inputPhoto">📷 拍照建檔</button>
-    <button class="lang-btn" id="inputText" onclick="setInputMode('text')" data-i18n="inputText">✏️ 文字建檔</button>
+  <!-- 單一輸入列：文字輸入＋拍照按鈕（聊天式） -->
+  <div class="input-bar">
+    <input type="text" class="input-bar-text" id="textInput" placeholder="輸入物品，或按 📷 拍照辨識…" oninput="handleTextInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitTextInput();}">
+    <button class="input-bar-photo" onclick="document.getElementById('photoInput').click()" aria-label="photo">📷</button>
+    <input type="file" accept="image/*" capture="environment" id="photoInput" style="display:none" onchange="handlePhotoSelect(event)">
   </div>
+  <div class="text-hint" id="textHintLabel" data-i18n="textHint">可一次輸入多筆，AI 會自動拆解每個物品</div>
 
-  <div class="text-card" id="textCard" style="display:none">
-    <textarea class="text-input" id="textInput" placeholder="輸入物品位置、名稱、數量、備註，例如：A1 廚房上層抽屜，電池三顆，快用完了，還有剪刀一個" oninput="handleTextInput()"></textarea>
-    <div class="text-hint" id="textHintLabel">可一次輸入多筆，AI 會自動拆解每個物品</div>
-  </div>
-
-  <div class="photo-card" id="photoCard">
-    <div class="photo-upload-zone" id="photoUploadZone">
-      <input type="file" accept="image/*" capture="environment" id="photoInput" onchange="handlePhotoSelect(event)">
-      <div class="photo-upload-icon">📷</div>
-      <div class="photo-upload-title" id="photoUploadTitle">拍照或選擇相簿照片</div>
-      <div class="photo-upload-hint" id="photoUploadHint">拍下櫃子、抽屜內部，AI 會自動辨識物品並建檔</div>
-    </div>
+  <div class="photo-card" id="photoCard" style="display:none">
     <div class="photo-preview-wrap" id="photoPreviewWrap" style="display:none">
       <img id="photoPreviewImg" src="" alt="預覽" data-i18n-alt="photoPreviewAlt">
       <button class="photo-preview-clear" onclick="clearPhoto()" data-i18n="photoReselect">✕ 重新選擇</button>
     </div>
   </div>
 
-  <button class="process-btn" id="processBtn" disabled onclick="processTranscript()" data-i18n="processPhoto">AI 辨識照片並建檔</button>
+  <button class="process-btn" id="processBtn" disabled onclick="processTranscript()" data-i18n="processText">AI 解析並建檔</button>
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
@@ -727,26 +742,6 @@
 
   <div id="photoInventoryPreview" style="margin-top:0.75rem"></div>
 
-  </section>
-
-  <!-- ===== Tab：tab-spaces ===== -->
-  <section class="tab-section" id="tab-spaces" style="display:none">
-  <div class="log-header">
-    <span class="log-title" data-i18n="spacesTitle">我的空間</span>
-  </div>
-  <!-- 拍照建檔：跳轉到 Add tab 的拍照流程 -->
-  <button class="scan-cta" onclick="switchTab('add');setInputMode('photo')">
-    <span>📷</span><span data-i18n="spacesGoPhoto">拍照建檔</span>
-  </button>
-  <div class="scan-manual-row">
-    <button class="scan-manual-link" onclick="toggleManualAddSpace()" data-i18n="scanManualLink">手動新增房間</button>
-  </div>
-  <div class="space-add-row" id="manualAddRow" style="display:none">
-    <input type="text" class="search-input" id="spaceNameInput" data-i18n-placeholder="spaceNamePh" placeholder="房間名稱，例如：客廳" onkeydown="if(event.key==='Enter')addSpace()">
-    <button class="log-btn" onclick="addSpace()" data-i18n="btnAddSpace">＋ 新增房間</button>
-  </div>
-  <div id="spacesContainer"></div>
-  <input type="file" id="spacePhotoInput" accept="image/*" style="display:none" onchange="handleSpacePhotoSelect(event)">
   </section>
 
   <!-- ===== Tab：tab-items ===== -->
@@ -967,10 +962,6 @@
       <button class="tab-btn active" data-tab="add" onclick="switchTab('add')">
         <span class="tab-icon">📝</span>
         <span class="tab-label" data-i18n="tabAdd">建檔</span>
-      </button>
-      <button class="tab-btn" data-tab="spaces" onclick="switchTab('spaces')">
-        <span class="tab-icon">🏠</span>
-        <span class="tab-label" data-i18n="tabSpaces">空間</span>
       </button>
       <button class="tab-btn" data-tab="items" onclick="switchTab('items')">
         <span class="tab-icon">📦</span>
@@ -1215,7 +1206,6 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   }
 
   let currentLang = 'zh-TW';
-  let currentInputMode = 'photo';
   let entries = [];
   let historyLog = []; // [{ id, timestamp, source, sourceLabel, itemIds: [entryIndexAtTimeOfInsert...], items: [...] }]
   let reviewQueue = []; // working copy of entries currently being confirmed
@@ -1234,7 +1224,6 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   const SPACES_KEY = 'homebase_spaces';
   let spaces = [];
   let currentSpaceFilter = 'all';
-  let pendingPhotoSpaceId = null;
 
   function uid(prefix) {
     return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -1243,31 +1232,30 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     return String(val ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function setInputMode(mode) {
-    if (mode !== 'photo' && mode !== 'text') mode = 'text';
-    // 離開拍照模式時丟棄未確認的拍照預覽
-    if (currentInputMode === 'photo' && mode !== 'photo' && photoState) cancelPhotoInventory();
-    currentInputMode = mode;
-    document.getElementById('inputPhoto').classList.toggle('active', mode === 'photo');
-    document.getElementById('inputText').classList.toggle('active', mode === 'text');
-    document.getElementById('photoCard').style.display = mode === 'photo' ? 'block' : 'none';
-    document.getElementById('textCard').style.display = mode === 'text' ? 'block' : 'none';
-
+  // 單一輸入列：模式由是否有照片決定（有照片 = 拍照模式，否則文字模式）
+  function inputMode() { return photoBase64 ? 'photo' : 'text'; }
+  function refreshInputBar() {
+    const hasPhoto = !!photoBase64;
+    const hasText = document.getElementById('textInput').value.trim().length > 0;
     const btn = document.getElementById('processBtn');
-    if (mode === 'text') {
-      btn.disabled = document.getElementById('textInput').value.trim().length === 0;
-      btn.textContent = t('processText');
-    } else {
-      btn.disabled = !photoBase64;
-      btn.textContent = t('processPhoto');
-    }
+    btn.disabled = !(hasPhoto || hasText);
+    const key = hasPhoto ? 'processPhoto' : 'processText';
+    btn.dataset.i18n = key; // 讓 applyLang 的 data-i18n 重繪保持一致
+    btn.textContent = t(key);
+    document.getElementById('photoCard').style.display = hasPhoto ? 'block' : 'none';
+  }
+  function submitTextInput() {
+    if (document.getElementById('textInput').value.trim().length === 0) return;
+    if (photoState) cancelPhotoInventory(); // 有未確認的拍照預覽 → 丟棄，改走文字流程
+    else if (photoBase64) clearPhoto();
+    processTranscript();
   }
 
   function handleTextInput() {
     const val = document.getElementById('textInput').value.trim();
     if (val.length > 0 && !inputStartedAt) inputStartedAt = new Date().toISOString();
     if (val.length === 0) inputStartedAt = null;
-    document.getElementById('processBtn').disabled = val.length === 0;
+    refreshInputBar();
   }
 
   function handlePhotoSelect(event) {
@@ -1299,9 +1287,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
         document.getElementById('photoPreviewImg').src = dataUrl;
         document.getElementById('photoPreviewWrap').style.display = 'block';
-        document.getElementById('photoUploadZone').style.display = 'none';
-        document.getElementById('processBtn').disabled = false;
         document.getElementById('errorBox').classList.remove('show');
+        refreshInputBar();
       };
       img.src = e.target.result;
     };
@@ -1311,9 +1298,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   function clearPhoto() {
     photoBase64 = null;
     document.getElementById('photoPreviewWrap').style.display = 'none';
-    document.getElementById('photoUploadZone').style.display = 'block';
     document.getElementById('photoInput').value = '';
-    document.getElementById('processBtn').disabled = true;
+    refreshInputBar();
   }
 
   // ===== i18n：中英雙語（自動偵測系統語言 + 手動切換；選擇存於 localStorage 'homebase-lang'）=====
@@ -1353,15 +1339,10 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       settingsNoteKey: "API Key 僅儲存在你瀏覽器的 localStorage，不會上傳到任何伺服器。重新整理頁面不會消失，但換瀏覽器或清除快取會消失。",
       btnSaveSettings: "儲存設定",
       btnClearSettings: "清除",
-      inputText: "✏️ 文字建檔",
-      inputPhoto: "📷 拍照建檔",
       searchPlaceholder: "找東西，例如：眼鏡在哪裡？",
       searchBtn: "搜尋",
       searching: "搜尋中⋯",
-      textPlaceholder: "輸入物品位置、名稱、數量、備註，例如：A1 廚房上層抽屜，電池三顆，快用完了，還有剪刀一個",
       textHint: "可一次輸入多筆，AI 會自動拆解每個物品",
-      photoTitle: "拍照或選擇相簿照片",
-      photoHint: "拍下房間一角，AI 會判斷是哪個空間並辨識物品",
       photoReselect: "✕ 重新選擇",
       photoPreviewAlt: "預覽",
       photoSourceLabel: "（來自照片辨識）",
@@ -1373,11 +1354,6 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       photoChooseSpace: "空間（可手動更改）",
       photoOptNewSpace: "＋ 建立新空間",
       photoNameMatchNote: "房間名稱與既有空間「{name}」相符，已自動選取；可手動更改",
-      photoRoomNameLabel: "房間名稱",
-      photoRoomTypeLabel: "房間類型",
-      photoZonesLabel: "區域（可增減）",
-      photoZonesLabelStatic: "此空間的區域",
-      photoAddZonePh: "新增區域…",
       photoItemsLabel: "辨識到的物品（勾選要加入的）",
       photoNoItems: "照片中沒有辨識到可加入的物品，仍可確認建立空間",
       photoZoneUnset: "未指定",
@@ -1388,7 +1364,12 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       photoAdded: "已加入 {n} 件物品到「{name}」",
       photoRefNote: "每間空間會保留最近 3 張小尺寸照片作為辨識基準，僅存在本機，不會上傳到雲端。",
       photoDefaultRoom: "未命名房間",
-      spacesGoPhoto: "拍照建檔",
+      photoUncertainAlert: "⚠️ 有 {n} 件物品需要你確認（疊放/遮擋/不確定）",
+      photoConfMedium: "待確認",
+      photoConfLow: "不確定",
+      photoNewSpaceBadge: "新空間",
+      photoNewNamePh: "輸入空間名稱…",
+      inputBarPh: "輸入物品，或按 📷 拍照辨識…",
       processText: "AI 解析並建檔",
       processPhoto: "AI 辨識照片並建檔",
       loadingParsing: "AI 正在解析語意⋯⋯",
@@ -1461,27 +1442,11 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       tabAdd: "建檔", tabItems: "記錄", tabSettings: "設定",
       dataTitle: "資料管理",
       getGeminiKey: "取得 Gemini API Key",
-      tabSpaces: "空間",
-      spacesTitle: "我的空間",
-      spaceNamePh: "房間名稱，例如：客廳",
-      btnAddSpace: "＋ 新增房間",
-      spacesEmpty: "還沒有房間，先新增第一個房間吧",
-      zoneCount: "{n} 個區域",
-      spaceItemCount: "{n} 件物品",
-      btnAddZone: "新增區域",
-      zoneNamePh: "區域名稱，例如：電視櫃",
-      btnUploadPhoto: "上傳照片",
-      btnChangePhoto: "更換照片",
-      btnDeletePhoto: "刪除照片",
-      btnDeleteSpace: "刪除房間",
-      btnDeleteZone: "刪除區域",
-      spaceDeleteConfirm: "確定要刪除房間「{name}」嗎？裡面的區域會一併刪除，物品的空間標記會保留但不再連結。",
       reviewSpace: "空間（房間）",
       reviewZone: "區域",
       optNoSpace: "— 不指定 —",
       spaceFilterAll: "全部空間",
       spaceFilterLabel: "空間篩選",
-      scanManualLink: "手動新增房間",
       cloudTitle: "☁️ 雲端同步",
       cloudDesc: "開啟後，每次資料變更都會自動把物品＋空間加密（AES-256）上傳到雲端，檔名為時間戳。他人輸入檔名＋密碼即可讀取，也可用 QR Code 或連結分享。可綁定多個雲端檔案，透過下方下拉選單切換；每個檔案的密碼各自獨立。密碼只留存在本次開啟的記憶體中，關閉頁面即消失，不會上傳。",
       cloudRestorePrompt: "偵測到已綁定的雲端檔名，輸入密碼即可從雲端還原資料。",
@@ -1576,15 +1541,10 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       settingsNoteKey: "Your API key is stored only in this browser's localStorage and never uploaded to any server. It survives page refreshes, but will be lost if you switch browsers or clear site data.",
       btnSaveSettings: "Save settings",
       btnClearSettings: "Clear",
-      inputText: "✏️ Text entry",
-      inputPhoto: "📷 Photo entry",
       searchPlaceholder: "Find something, e.g. \"Where are my glasses?\"",
       searchBtn: "Search",
       searching: "Searching…",
-      textPlaceholder: "Enter item locations, names, quantities, notes — e.g. \"A1 kitchen top drawer, three batteries, running low, plus one pair of scissors\"",
       textHint: "You can enter multiple items at once — AI will split them automatically",
-      photoTitle: "Take a photo or choose from your library",
-      photoHint: "Photograph a corner of a room — AI will match the space and identify items",
       photoReselect: "✕ Reselect",
       photoPreviewAlt: "Preview",
       photoSourceLabel: "(from photo recognition)",
@@ -1596,11 +1556,6 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       photoChooseSpace: "Space (change manually)",
       photoOptNewSpace: "+ Create new space",
       photoNameMatchNote: "Room name matches existing space \"{name}\" — auto-selected; change manually if needed",
-      photoRoomNameLabel: "Room name",
-      photoRoomTypeLabel: "Room type",
-      photoZonesLabel: "Zones (editable)",
-      photoZonesLabelStatic: "Zones in this space",
-      photoAddZonePh: "Add zone…",
       photoItemsLabel: "Recognized items (check to add)",
       photoNoItems: "No recognizable items in this photo; you can still confirm to create the space",
       photoZoneUnset: "Unspecified",
@@ -1611,7 +1566,12 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       photoAdded: "Added {n} items to \"{name}\"",
       photoRefNote: "Each space keeps its 3 most recent small photos as recognition reference, stored only on this device and never uploaded.",
       photoDefaultRoom: "Unnamed room",
-      spacesGoPhoto: "Scan to add items",
+      photoUncertainAlert: "⚠️ {n} item(s) need your review (stacked / occluded / uncertain)",
+      photoConfMedium: "review",
+      photoConfLow: "uncertain",
+      photoNewSpaceBadge: "New space",
+      photoNewNamePh: "Enter space name…",
+      inputBarPh: "Type items, or tap 📷 to scan…",
       processText: "Parse with AI & save",
       processPhoto: "Recognize photo with AI & save",
       loadingParsing: "AI is parsing…",
@@ -1684,27 +1644,11 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       tabAdd: "Add", tabItems: "Items", tabSettings: "Settings",
       dataTitle: "Data",
       getGeminiKey: "Get Gemini API Key",
-      tabSpaces: "Spaces",
-      spacesTitle: "My Spaces",
-      spaceNamePh: "Room name, e.g. Living Room",
-      btnAddSpace: "+ Add Room",
-      spacesEmpty: "No rooms yet — add your first room above",
-      zoneCount: "{n} zones",
-      spaceItemCount: "{n} items",
-      btnAddZone: "Add Zone",
-      zoneNamePh: "Zone name, e.g. TV stand",
-      btnUploadPhoto: "Upload Photo",
-      btnChangePhoto: "Change Photo",
-      btnDeletePhoto: "Delete Photo",
-      btnDeleteSpace: "Delete Room",
-      btnDeleteZone: "Delete Zone",
-      spaceDeleteConfirm: "Delete room \"{name}\"? Its zones will be removed too. Items keep their space tag but it will no longer link.",
       reviewSpace: "Space (Room)",
       reviewZone: "Zone",
       optNoSpace: "— None —",
       spaceFilterAll: "All Spaces",
       spaceFilterLabel: "Space filter",
-      scanManualLink: "Add room manually",
       cloudTitle: "☁️ Cloud Sync",
       cloudDesc: "When enabled, every data change is automatically encrypted (AES-256) and uploaded to the cloud. The filename is a timestamp; others can read it with the filename + password, or via a QR code / share link. You can link multiple cloud files and switch between them in the dropdown below; each file has its own password. The password stays in this session's memory only and disappears when the page closes — it is never uploaded.",
       cloudRestorePrompt: "A linked cloud file was found. Enter the password to restore your data from the cloud.",
@@ -1863,12 +1807,10 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     const langToggle = document.getElementById('langToggle');
     if (langToggle) langToggle.textContent = lang === 'zh-TW' ? 'EN' : '中文';
     // searchPlaceholders / photoTitles / photoHints 全部收斂到這裡）
-    document.getElementById('textInput').placeholder = t('textPlaceholder');
+    document.getElementById('textInput').placeholder = t('inputBarPh');
     document.getElementById('textHintLabel').textContent = t('textHint');
     document.getElementById('searchInput').placeholder = t('searchPlaceholder');
-    document.getElementById('photoUploadTitle').textContent = t('photoTitle');
-    document.getElementById('photoUploadHint').textContent = t('photoHint');
-    document.getElementById('processBtn').textContent = currentInputMode === 'photo' ? t('processPhoto') : t('processText');
+    refreshInputBar(); // 依是否有照片更新辨識按鈕文字
     const loadingBox = document.getElementById('loading');
     const loadingLabel = document.querySelector('#loading span');
     if (loadingLabel && !loadingBox.classList.contains('show')) loadingLabel.textContent = t('loadingParsing');
@@ -1879,7 +1821,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     if (typeof selectProvider === 'function' && aiConfig) selectProvider(aiConfig.provider, true);
     renderHistory();
     renderLog();
-    renderSpaces();
+    renderSpaceFilter();
     if (document.getElementById('reviewOverlay').classList.contains('show')) renderReviewQueue();
     if (typeof renderPhotoPreview === 'function') renderPhotoPreview();
     if (typeof renderCloudSection === 'function') renderCloudSection();
@@ -1893,8 +1835,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
   async function processTranscript() {
     if (!hasApiKey()) { showApiKeyReminder(); return; }
-    // 拍照模式走新的「空間＋物品一次辨識」流程
-    if (currentInputMode === 'photo') { await runPhotoInventory(); return; }
+    // 有照片走「空間＋物品一次辨識」流程，否則走文字解析
+    if (inputMode() === 'photo') { await runPhotoInventory(); return; }
 
     const text = document.getElementById('textInput').value.trim();
     if (!text) return;
@@ -2327,7 +2269,7 @@ ${entrySchema}
           if (Array.isArray(importedData.spaces)) {
             spaces = importedData.spaces;
             saveSpaces();
-            renderSpaces();
+            renderSpaceFilter();
           }
           expandedGroups.clear();
           renderLog();
@@ -2559,143 +2501,6 @@ ${t('promptLangLine')}`;
     return `<span class="space-badge">📍 ${escapeHtml(label)}</span>`;
   }
 
-  function renderSpaces() {
-    const container = document.getElementById('spacesContainer');
-    if (!container) return;
-    if (currentSpaceFilter !== 'all' && !findSpace(currentSpaceFilter)) currentSpaceFilter = 'all';
-    if (spaces.length === 0) {
-      container.innerHTML = `<div class="empty-state" data-i18n="spacesEmpty">${t('spacesEmpty')}</div>`;
-    } else {
-      container.innerHTML = spaces.map(sp => {
-        const itemCount = entries.filter(e => e.spaceId === sp.id).length;
-        const itemsHere = entries.filter(e => e.spaceId === sp.id);
-        const zones = sp.zones || [];
-        return `
-        <div class="space-card">
-          <div class="space-card-top">
-            <div class="space-photo">${sp.photo ? `<img src="${sp.photo}" alt="">` : `<div class="space-photo-ph">🏠</div>`}</div>
-            <div class="space-info">
-              <div class="space-name">${escapeHtml(sp.name)}</div>
-              <div class="space-meta">${t('zoneCount', { n: zones.length })} · ${t('spaceItemCount', { n: itemCount })}</div>
-            </div>
-            <button class="space-del" onclick="deleteSpace('${sp.id}')" title="${escapeAttr(t('btnDeleteSpace'))}">🗑️</button>
-          </div>
-          ${itemsHere.length ? `<div class="space-items-row">${itemsHere.slice(0, 8).map(e =>
-            `<span class="space-item-chip">${escapeHtml(e.item)}${e.quantity ? ' ×' + escapeHtml(String(e.quantity)) : ''}</span>`
-          ).join('')}${itemsHere.length > 8 ? `<span class="space-item-more">+${itemsHere.length - 8}</span>` : ''}</div>` : ''}
-          <div class="space-photo-row">
-            <button class="log-btn" onclick="triggerSpacePhoto('${sp.id}')">${t(sp.photo ? 'btnChangePhoto' : 'btnUploadPhoto')}</button>
-            ${sp.photo ? `<button class="log-btn" onclick="deleteSpacePhoto('${sp.id}')">${t('btnDeletePhoto')}</button>` : ''}
-          </div>
-          <div class="zone-list">
-            ${zones.map(z => `
-              <div class="zone-row">
-                <span class="zone-name">${escapeHtml(z.name)}</span>
-                <button class="zone-del" onclick="deleteZone('${sp.id}', '${z.id}')" title="${escapeAttr(t('btnDeleteZone'))}">✕</button>
-              </div>`).join('')}
-          </div>
-          <div class="zone-add-row">
-            <input type="text" class="search-input" id="zoneInput-${sp.id}" placeholder="${escapeAttr(t('zoneNamePh'))}" onkeydown="if(event.key==='Enter')addZone('${sp.id}')">
-            <button class="log-btn" onclick="addZone('${sp.id}')">${t('btnAddZone')}</button>
-          </div>
-        </div>`;
-      }).join('');
-    }
-    renderSpaceFilter();
-  }
-
-  function addSpace() {
-    const input = document.getElementById('spaceNameInput');
-    const name = input.value.trim();
-    if (!name) return;
-    spaces.push({ id: uid('sp_'), name: name, photo: null, refPhotos: [], zones: [] });
-    input.value = '';
-    saveSpaces();
-    renderSpaces();
-  }
-
-  function deleteSpace(id) {
-    const sp = findSpace(id);
-    if (!sp) return;
-    if (!confirm(t('spaceDeleteConfirm', { name: sp.name }))) return;
-    spaces = spaces.filter(s => s.id !== id);
-    saveSpaces();
-    renderSpaces();
-    renderLog(); // 物品數徽章可能受影響
-  }
-
-  function addZone(spaceId) {
-    const sp = findSpace(spaceId);
-    if (!sp) return;
-    const input = document.getElementById('zoneInput-' + spaceId);
-    const name = input.value.trim();
-    if (!name) return;
-    sp.zones.push({ id: uid('z_'), name: name });
-    saveSpaces();
-    renderSpaces();
-  }
-
-  function deleteZone(spaceId, zoneId) {
-    const sp = findSpace(spaceId);
-    if (!sp) return;
-    sp.zones = sp.zones.filter(z => z.id !== zoneId);
-    saveSpaces();
-    renderSpaces();
-  }
-
-  // 房間照片：上傳前用 canvas 壓縮（最長邊 800px、JPEG 0.7），避免 localStorage 爆掉
-  function triggerSpacePhoto(spaceId) {
-    pendingPhotoSpaceId = spaceId;
-    document.getElementById('spacePhotoInput').click();
-  }
-
-  function handleSpacePhotoSelect(event) {
-    const file = event.target.files[0];
-    event.target.value = '';
-    if (!file || !pendingPhotoSpaceId) return;
-    const spaceId = pendingPhotoSpaceId;
-    pendingPhotoSpaceId = null;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX = 800;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        const sp = findSpace(spaceId);
-        if (sp) {
-          sp.photo = dataUrl;
-          saveSpaces();
-          renderSpaces();
-        }
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function deleteSpacePhoto(spaceId) {
-    const sp = findSpace(spaceId);
-    if (!sp) return;
-    sp.photo = null;
-    saveSpaces();
-    renderSpaces();
-  }
-
-
-  function toggleManualAddSpace() {
-    const row = document.getElementById('manualAddRow');
-    row.style.display = row.style.display === 'none' ? '' : 'none';
-  }
-
   // ===== 拍照建檔：新照片＋各空間基準照 → AI 判斷空間＋辨識物品 → 預覽 → 直接入庫 =====
   function buildPhotoPrompt(refSpaces) {
     const refSection = refSpaces.length > 0
@@ -2721,8 +2526,13 @@ ${refSection}
 【房間與物品辨識】
 - roomName：簡短口語的房間名稱；roomType：客廳/臥室/廚房/書房/浴室/陽台/儲藏室等類型
 - zones：新照片中可見的主要家具或收納區域名稱（例如：流理台、衣櫃、書桌），最多 8 個
-- items：陣列，每項為 {"name": "物品名稱", "zone": "對應 zones 中的區域名稱（無法判斷則空字串）", "qty": 數量數字（數得出才填，否則 null）}
-- 只列出有把握辨識出的物品，模糊不清的不要硬猜；若完全沒有可辨識物品，items 回傳空陣列（此時仍要完成空間判斷）。
+- items：陣列，每項為 {"name": "物品名稱", "zone": "對應 zones 中的區域名稱（無法判斷則空字串）", "qty": 數量數字（數得出才填，否則 null）, "confidence": "high | medium | low", "note": "不確定原因短句（有把握則空字串）"}
+- 每件物品都要評估信心度：
+  - high：清楚可見、確定是什麼物品
+  - medium：看得到但有疑慮（例如部分被遮擋、角度奇怪、可能是 A 也可能是 B）
+  - low：疊放在一起分不清、只看到一小部分、幾乎無法確定是什麼
+- 重要規則：疊在一起、被其他物品遮擋、只看到局部、無法確定是什麼的物品，**必須**標 medium 或 low，並在 note 用使用者語言寫一句簡短原因（例如「被書堆遮擋只看到一半」「可能是杯子或花瓶」），絕對不許默默當成 high 混入。
+- note 使用使用者語言（${t('promptLangName')}）撰寫；若完全沒有可辨識物品，items 回傳空陣列（此時仍要完成空間判斷）。
 
 使用者語言：${t('promptLangName')}
 ${t('promptLangLine')}
@@ -2734,7 +2544,7 @@ ${t('promptLangLine')}
   "roomName": "房間名稱",
   "roomType": "房間類型",
   "zones": ["區域1", "區域2"],
-  "items": [{"name": "物品名稱", "zone": "區域名稱", "qty": 2}]
+  "items": [{"name": "物品名稱", "zone": "區域名稱", "qty": 2, "confidence": "high", "note": ""}]
 }`;
   }
 
@@ -2780,14 +2590,23 @@ ${t('promptLangLine')}
       const zones = Array.isArray(parsed.zones)
         ? parsed.zones.filter(z => typeof z === 'string').map(z => z.trim()).filter(Boolean).slice(0, 8)
         : [];
+      const confOf = v => {
+        const c = String(v || '').trim().toLowerCase();
+        return c === 'high' || c === 'medium' || c === 'low' ? c : 'medium';
+      };
       const items = Array.isArray(parsed.items)
-        ? parsed.items.filter(it => it && typeof it === 'object').map(it => ({
-            name: str(it.name),
-            zoneName: str(it.zone),
-            zoneId: '',
-            qty: (it.qty === null || it.qty === undefined || it.qty === '') ? '' : Number(it.qty),
-            checked: true
-          })).filter(it => it.name).slice(0, 60)
+        ? parsed.items.filter(it => it && typeof it === 'object').map(it => {
+            const iconf = confOf(it.confidence);
+            return {
+              name: str(it.name),
+              zoneName: str(it.zone),
+              zoneId: '',
+              qty: (it.qty === null || it.qty === undefined || it.qty === '') ? '' : Number(it.qty),
+              confidence: iconf,
+              note: str(it.note).slice(0, 140),
+              checked: iconf !== 'low' // low 預設不勾選；high/medium 預設勾選
+            };
+          }).filter(it => it.name).slice(0, 60)
         : [];
 
       // 預設選取：AI 判斷的空間；若判為新空間但房間名稱與既有空間完全相符，則自動選取該空間（附註說明）
@@ -2844,6 +2663,7 @@ ${t('promptLangLine')}
     const chosenSp = isNew ? null : findSpace(st.chosenSpaceId);
     const matchSp = st.matchSpaceId === 'new' ? null : findSpace(st.matchSpaceId);
     const unsure = st.confidence !== 'high';
+    const uncertainCount = st.items.filter(it => it.confidence !== 'high').length;
     const inputCss = 'flex:1;min-width:0;font:inherit;font-size:0.85rem;padding:0.35rem 0.5rem;border:1px solid var(--border);border-radius:6px;background:var(--soft);color:inherit;box-sizing:border-box;';
 
     box.innerHTML = `
@@ -2858,53 +2678,42 @@ ${t('promptLangLine')}
           <figcaption style="font-size:0.72rem;color:var(--muted);text-align:center;">${escapeHtml(t('photoRefLabel'))}</figcaption>
         </figure>` : ''}
       </div>
-      <div class="scan-created-note">${matchSp ? '🔍 ' + escapeHtml(t('photoMatchIs', { name: matchSp.name })) : '🆕 ' + escapeHtml(t('photoMatchNew'))}</div>
-      ${unsure ? `<div class="settings-note warn" style="margin-bottom:0.7rem;">⚠️ ${escapeHtml(t('photoMatchUnsure'))}</div>` : ''}
-      ${st.nameMatched && chosenSp ? `<div class="settings-note" style="margin-bottom:0.7rem;">${escapeHtml(t('photoNameMatchNote', { name: chosenSp.name }))}</div>` : ''}
-      <div class="scan-field">
-        <label>${escapeHtml(t('photoChooseSpace'))}</label>
-        <select class="settings-input" style="width:100%;cursor:pointer;" onchange="onPhotoSpaceChoice(this.value)">
-          ${spaces.map(s => `<option value="${s.id}"${st.chosenSpaceId === s.id ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
-          <option value="new"${isNew ? ' selected' : ''}>${escapeHtml(t('photoOptNewSpace'))}</option>
-        </select>
-      </div>
-      ${isNew ? `
-      <div class="scan-field">
-        <label>${escapeHtml(t('photoRoomNameLabel'))}</label>
-        <input type="text" value="${escapeAttr(st.roomName)}" oninput="photoState.roomName=this.value">
-      </div>
-      <div class="scan-field">
-        <label>${escapeHtml(t('photoRoomTypeLabel'))}</label>
-        <input type="text" value="${escapeAttr(st.roomType)}" oninput="photoState.roomType=this.value">
-      </div>
-      <div class="scan-field">
-        <label>${escapeHtml(t('photoZonesLabel'))}</label>
-        <div class="scan-chips">
-          ${st.zones.map((z, i) => `<span class="scan-chip">${escapeHtml(z)}<button onclick="photoRemoveZone(${i})">✕</button></span>`).join('')}
+      <div class="scan-loc-bar">
+        <div class="scan-created-note" style="margin-bottom:0.3rem;">${matchSp ? '🔍 ' + escapeHtml(t('photoMatchIs', { name: matchSp.name })) : '🆕 ' + escapeHtml(t('photoMatchNew'))}</div>
+        ${unsure ? `<div class="settings-note warn" style="margin-bottom:0.5rem;">⚠️ ${escapeHtml(t('photoMatchUnsure'))}</div>` : ''}
+        ${st.nameMatched && chosenSp ? `<div class="settings-note" style="margin-bottom:0.5rem;">${escapeHtml(t('photoNameMatchNote', { name: chosenSp.name }))}</div>` : ''}
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          ${st.refThumb ? `<img class="scan-ref-thumb" src="${st.refThumb}" alt="">` : ''}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:0.2rem;">${escapeHtml(t('photoChooseSpace'))}</div>
+            <select class="settings-input" style="width:100%;cursor:pointer;" onchange="onPhotoSpaceChoice(this.value)">
+              ${spaces.map(s => `<option value="${s.id}"${st.chosenSpaceId === s.id ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
+              <option value="new"${isNew ? ' selected' : ''}>${escapeHtml(t('photoOptNewSpace'))}</option>
+            </select>
+          </div>
         </div>
-        <div class="scan-chip-add">
-          <input type="text" id="photoZoneInput" placeholder="${escapeAttr(t('photoAddZonePh'))}" onkeydown="if(event.key==='Enter')photoAddZone()">
-          <button class="log-btn" onclick="photoAddZone()">＋</button>
-        </div>
-      </div>` : `
-      <div class="scan-field">
-        <label>${escapeHtml(t('photoZonesLabelStatic'))}</label>
-        <div class="scan-chips">
-          ${(chosenSp ? chosenSp.zones : []).map(z => `<span class="scan-chip">${escapeHtml(z.name)}</span>`).join('') || `<span class="scan-empty-note">—</span>`}
-        </div>
-      </div>`}
+        ${isNew ? `<div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.45rem;">
+          <input type="text" style="${inputCss}" value="${escapeAttr(st.roomName)}" placeholder="${escapeAttr(t('photoNewNamePh'))}" oninput="photoState.roomName=this.value">
+          <span class="scan-new-badge">${escapeHtml(t('photoNewSpaceBadge'))}</span>
+        </div>` : ''}
+      </div>
+      ${uncertainCount > 0 ? `<div class="settings-note warn" style="margin-bottom:0.7rem;">⚠️ ${escapeHtml(t('photoUncertainAlert', { n: uncertainCount }))}</div>` : ''}
       <div class="scan-field">
         <label>${escapeHtml(t('photoItemsLabel'))}</label>
         ${st.items.length === 0
           ? `<div class="scan-empty-note">${escapeHtml(t('photoNoItems'))}</div>`
           : st.items.map((it, i) => `
-          <div class="scan-item-row">
-            <input type="checkbox"${it.checked ? ' checked' : ''} onchange="photoState.items[${i}].checked=this.checked">
-            <input type="text" style="${inputCss}" value="${escapeAttr(it.name)}" oninput="photoState.items[${i}].name=this.value">
-            <span style="color:var(--muted);">×</span>
-            <input type="number" min="0" style="width:3.2rem;${inputCss.replace('flex:1;min-width:0;', '')}" value="${escapeAttr(it.qty)}" placeholder="${escapeAttr(t('photoQtyPh'))}" oninput="photoState.items[${i}].qty=this.value">
-            <select class="settings-input" style="max-width:7rem;cursor:pointer;" onchange="onPhotoItemZone(${i}, this.value)">${photoZoneOptions(st, it)}</select>
-            <button class="scan-item-del" onclick="photoRemoveItem(${i})">✕</button>
+          <div>
+            <div class="scan-item-row">
+              <input type="checkbox"${it.checked ? ' checked' : ''} onchange="photoState.items[${i}].checked=this.checked">
+              <input type="text" style="${inputCss}" value="${escapeAttr(it.name)}" oninput="photoState.items[${i}].name=this.value">
+              <span style="color:var(--muted);">×</span>
+              <input type="number" min="0" style="width:3.2rem;${inputCss.replace('flex:1;min-width:0;', '')}" value="${escapeAttr(it.qty)}" placeholder="${escapeAttr(t('photoQtyPh'))}" oninput="photoState.items[${i}].qty=this.value">
+              <select class="settings-input" style="max-width:7rem;cursor:pointer;" onchange="onPhotoItemZone(${i}, this.value)">${photoZoneOptions(st, it)}</select>
+              ${it.confidence !== 'high' ? `<span class="conf-badge" title="${escapeAttr(t(it.confidence === 'low' ? 'photoConfLow' : 'photoConfMedium'))}">⚠️</span>` : ''}
+              <button class="scan-item-del" onclick="photoRemoveItem(${i})">✕</button>
+            </div>
+            ${it.confidence !== 'high' && it.note ? `<div class="scan-item-note">⚠️ ${escapeHtml(it.note)}</div>` : ''}
           </div>`).join('')}
       </div>
       <div class="settings-note" style="margin-bottom:0.7rem;">${escapeHtml(t('photoRefNote'))}</div>
@@ -2931,19 +2740,6 @@ ${t('promptLangLine')}
     else photoState.items[i].zoneId = value;
   }
 
-  function photoAddZone() {
-    if (!photoState || photoState.chosenSpaceId !== 'new') return;
-    const input = document.getElementById('photoZoneInput');
-    const name = input.value.trim();
-    if (!name || photoState.zones.length >= 8) return;
-    photoState.zones.push(name);
-    renderPhotoPreview();
-  }
-  function photoRemoveZone(i) {
-    if (!photoState || photoState.chosenSpaceId !== 'new') return;
-    photoState.zones.splice(i, 1);
-    renderPhotoPreview();
-  }
   function photoRemoveItem(i) {
     if (!photoState) return;
     photoState.items.splice(i, 1);
@@ -3007,7 +2803,7 @@ ${t('promptLangLine')}
             category: '',
             quantity: it.qty === '' ? null : Number(it.qty),
             unit: '',
-            note: '',
+            note: it.note || '', // AI 的不確定註記一併存入物品備註
             placed_at_raw: '',
             spaceId: spaceId,
             zoneId: zoneId,
@@ -3032,7 +2828,7 @@ ${t('promptLangLine')}
       }
       renderLog();
       renderHistory();
-      renderSpaces();
+      renderSpaceFilter();
       // 4. 顯示成功訊息並重置
       photoState = null;
       clearPhoto();
@@ -3044,13 +2840,14 @@ ${t('promptLangLine')}
   }
 
 
-  // 記錄 Tab 的空間篩選
+  // 記錄 Tab 的空間篩選：只列出「有物品」的空間（無物品的空間不顯示）
   function renderSpaceFilter() {
     const sel = document.getElementById('spaceFilter');
     if (!sel) return;
-    if (currentSpaceFilter !== 'all' && !findSpace(currentSpaceFilter)) currentSpaceFilter = 'all';
+    const withItems = spaces.filter(s => entries.some(e => e.spaceId === s.id));
+    if (currentSpaceFilter !== 'all' && !withItems.some(s => s.id === currentSpaceFilter)) currentSpaceFilter = 'all';
     sel.innerHTML = `<option value="all">${t('spaceFilterAll')}</option>` +
-      spaces.map(s => `<option value="${s.id}"${s.id === currentSpaceFilter ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+      withItems.map(s => `<option value="${s.id}"${s.id === currentSpaceFilter ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
   }
 
   function setSpaceFilter(v) {
@@ -3493,7 +3290,7 @@ ${t('promptLangLine')}
     expandedGroups.clear();
     renderLog();
     renderHistory();
-    renderSpaces();
+    renderSpaceFilter();
     cloudVersionCache = null;
     document.getElementById('cloudHistoryBox').style.display = 'none';
     await cloudDoSync(true); // 還原本身成為一個新版本
@@ -3507,7 +3304,7 @@ ${t('promptLangLine')}
     expandedGroups.clear();
     renderLog();
     renderHistory();
-    renderSpaces();
+    renderSpaceFilter();
   }
   // filename + pw → 下載→解密→載入→綁定；成功回傳 true。密碼只進記憶體 cloudPwMap。
   async function cloudBindLoadedFile(filename, pw) {
