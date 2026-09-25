@@ -40,6 +40,15 @@
   }
   .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
 
+  /* Header language toggle（小而低調） */
+  .lang-toggle {
+    margin-left: auto; align-self: center;
+    font-size: 0.72rem; font-weight: 600; color: var(--muted);
+    background: none; border: 1px solid var(--border); border-radius: 3px;
+    padding: 0.25rem 0.6rem; cursor: pointer; font-family: inherit;
+  }
+  .lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
   /* Language toggle */
   .lang-row { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
   .lang-btn {
@@ -191,6 +200,7 @@
   .entry-qty { font-size: 0.78rem; font-weight: 600; background: #f0f0ec; padding: 0.15rem 0.5rem; border-radius: 2px; color: #555; }
   .entry-note { font-size: 0.82rem; color: #666; padding-left: 0.1rem; }
   .entry-note::before { content: '備註：'; color: var(--muted); }
+  html[lang="en"] .entry-note::before { content: 'Note: '; }
 
   /* Log section */
   .log-header {
@@ -492,14 +502,15 @@
 
   <div class="header">
     <span class="logo">HomeBase</span>
-    <span class="badge">語音建檔測試</span>
+    <span class="badge" data-i18n="badge">語音建檔測試</span>
+    <button class="lang-toggle" id="langToggle" onclick="toggleLang()" data-i18n-title="langToggleTitle">EN</button>
   </div>
-  <div class="subtitle">說出物品位置、名稱、數量，AI 自動整理成結構化庫存資料</div>
+  <div class="subtitle" data-i18n="subtitle">說出物品位置、名稱、數量，AI 自動整理成結構化庫存資料</div>
 
   <div class="settings-toggle" onclick="toggleSettings()">
     <div class="settings-toggle-left">
       <span class="settings-icon">⚙️</span>
-      <span class="settings-title">AI 設定</span>
+      <span class="settings-title" data-i18n="settingsTitle">AI 設定</span>
       <span class="settings-status missing" id="settingsStatus">未設定</span>
     </div>
     <span class="settings-caret" id="settingsCaret">▾</span>
@@ -509,64 +520,59 @@
     <div class="provider-grid">
       <button class="provider-btn" id="provider-claude" onclick="selectProvider('claude')">
         <span class="provider-btn-name">Claude</span>
-        <span class="provider-btn-cors">需要代理</span>
+        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
       </button>
       <button class="provider-btn" id="provider-gemini" onclick="selectProvider('gemini')">
         <span class="provider-btn-name">Gemini</span>
-        <span class="provider-btn-cors">✓ 可直連</span>
+        <span class="provider-btn-cors" data-i18n="providerDirect">✓ 可直連</span>
       </button>
       <button class="provider-btn" id="provider-deepseek" onclick="selectProvider('deepseek')">
         <span class="provider-btn-name">DeepSeek</span>
-        <span class="provider-btn-cors">需要代理</span>
+        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
       </button>
       <button class="provider-btn" id="provider-grok" onclick="selectProvider('grok')">
         <span class="provider-btn-name">Grok</span>
-        <span class="provider-btn-cors">需要代理</span>
+        <span class="provider-btn-cors" data-i18n="providerNeedProxy">需要代理</span>
       </button>
     </div>
 
     <div class="settings-note" id="corsNote"></div>
 
     <div class="settings-field">
-      <label class="settings-label">模型</label>
+      <label class="settings-label" data-i18n="labelModel">模型</label>
       <select class="settings-input" id="modelSelect" onchange="onModelChange()" style="font-family:'Inter',sans-serif; cursor:pointer;"></select>
     </div>
 
     <div class="settings-field">
       <label class="settings-label">API Key</label>
-      <input type="password" class="settings-input" id="apiKeyInput" placeholder="貼上你的 API Key">
+      <input type="password" class="settings-input" id="apiKeyInput" placeholder="貼上你的 API Key" data-i18n-placeholder="apiKeyPlaceholder">
     </div>
 
     <div class="settings-field" id="proxyField" style="display:none">
-      <label class="settings-label">代理伺服器網址（需要代理的供應商）</label>
-      <input type="text" class="settings-input" id="proxyInput" placeholder="例如：http://localhost:3000/api/chat">
+      <label class="settings-label" data-i18n="labelProxy">代理伺服器網址（需要代理的供應商）</label>
+      <input type="text" class="settings-input" id="proxyInput" placeholder="例如：http://localhost:3000/api/chat" data-i18n-placeholder="proxyPlaceholder">
     </div>
 
-    <div class="settings-note">
+    <div class="settings-note" data-i18n="settingsNoteKey">
       API Key 僅儲存在你瀏覽器的 localStorage，不會上傳到任何伺服器。重新整理頁面不會消失，但換瀏覽器或清除快取會消失。
     </div>
 
     <div class="settings-save-row">
-      <button class="settings-save-btn" onclick="saveSettings()">儲存設定</button>
-      <button class="settings-clear-btn" onclick="clearSettings()">清除</button>
+      <button class="settings-save-btn" onclick="saveSettings()" data-i18n="btnSaveSettings">儲存設定</button>
+      <button class="settings-clear-btn" onclick="clearSettings()" data-i18n="btnClearSettings">清除</button>
     </div>
   </div>
 
-  <div class="lang-row">
-    <button class="lang-btn active" id="langZh" onclick="setLang('zh-TW')">中文</button>
-    <button class="lang-btn" id="langEn" onclick="setLang('en-US')">English</button>
-  </div>
-
   <div class="lang-row" style="display:grid; grid-template-columns: repeat(3, 1fr);">
-    <button class="lang-btn active" id="inputVoice" onclick="setInputMode('voice')">🎙️ 語音輸入</button>
-    <button class="lang-btn" id="inputText" onclick="setInputMode('text')">⌨️ 文字輸入</button>
-    <button class="lang-btn" id="inputPhoto" onclick="setInputMode('photo')">📷 拍照輸入</button>
+    <button class="lang-btn active" id="inputVoice" onclick="setInputMode('voice')" data-i18n="inputVoice">🎙️ 語音輸入</button>
+    <button class="lang-btn" id="inputText" onclick="setInputMode('text')" data-i18n="inputText">⌨️ 文字輸入</button>
+    <button class="lang-btn" id="inputPhoto" onclick="setInputMode('photo')" data-i18n="inputPhoto">📷 拍照輸入</button>
   </div>
 
   <div class="search-card">
     <div class="search-row">
-      <input type="text" class="search-input" id="searchInput" placeholder="找東西，例如：眼鏡在哪裡？" onkeydown="if(event.key==='Enter')doSearch()">
-      <button class="search-btn" id="searchBtn" onclick="doSearch()">搜尋</button>
+      <input type="text" class="search-input" id="searchInput" placeholder="找東西，例如：眼鏡在哪裡？" onkeydown="if(event.key==='Enter')doSearch()" data-i18n-placeholder="searchPlaceholder">
+      <button class="search-btn" id="searchBtn" onclick="doSearch()" data-i18n="searchBtn">搜尋</button>
     </div>
     <div class="search-result" id="searchResult"></div>
   </div>
@@ -594,21 +600,21 @@
       <div class="photo-upload-hint" id="photoUploadHint">拍下櫃子、抽屜內部，AI 會自動辨識物品並建檔</div>
     </div>
     <div class="photo-preview-wrap" id="photoPreviewWrap" style="display:none">
-      <img id="photoPreviewImg" src="" alt="預覽">
-      <button class="photo-preview-clear" onclick="clearPhoto()">✕ 重新選擇</button>
+      <img id="photoPreviewImg" src="" alt="預覽" data-i18n-alt="photoPreviewAlt">
+      <button class="photo-preview-clear" onclick="clearPhoto()" data-i18n="photoReselect">✕ 重新選擇</button>
     </div>
   </div>
 
   <div class="transcript-box" id="transcriptBox">
-    <div class="transcript-label">語音辨識結果</div>
+    <div class="transcript-label" data-i18n="transcriptLabel">語音辨識結果</div>
     <div class="transcript-text" id="transcriptText"></div>
   </div>
 
-  <button class="process-btn" id="processBtn" disabled onclick="processTranscript()">AI 解析並建檔</button>
+  <button class="process-btn" id="processBtn" disabled onclick="processTranscript()" data-i18n="processText">AI 解析並建檔</button>
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <span>AI 正在解析語意⋯⋯</span>
+    <span data-i18n="loadingParsing">AI 正在解析語意⋯⋯</span>
   </div>
 
   <div class="error-box" id="errorBox"></div>
@@ -617,41 +623,41 @@
   <div class="history-toggle" onclick="toggleHistory()">
     <div class="history-toggle-left">
       <span class="settings-icon">🕓</span>
-      <span class="settings-title">歷史紀錄</span>
+      <span class="settings-title" data-i18n="historyTitle">歷史紀錄</span>
       <span class="history-count" id="historyCount">0 筆</span>
     </div>
     <span class="settings-caret" id="historyCaret">▾</span>
   </div>
   <div class="history-panel" id="historyPanel">
     <div id="historyContainer">
-      <div class="history-empty" id="historyEmpty">還沒有任何輸入紀錄</div>
+      <div class="history-empty" id="historyEmpty" data-i18n="historyEmpty">還沒有任何輸入紀錄</div>
     </div>
   </div>
 
   <div class="log-header">
-    <span class="log-title">庫存紀錄</span>
+    <span class="log-title" data-i18n="logTitle">庫存紀錄</span>
     <div class="log-actions">
       <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJsonImport(event)">
-      <button class="log-btn" onclick="uploadJson()">⬆ 匯入 JSON</button>
-      <button class="log-btn" onclick="downloadJson()">⬇ 匯出 JSON</button>
-      <button class="log-btn" onclick="clearLog()">清空</button>
+      <button class="log-btn" onclick="uploadJson()" data-i18n="btnImportJson">⬆ 匯入 JSON</button>
+      <button class="log-btn" onclick="downloadJson()" data-i18n="btnExportJson">⬇ 匯出 JSON</button>
+      <button class="log-btn" onclick="clearLog()" data-i18n="btnClearLog">清空</button>
     </div>
   </div>
   <div class="log-header" style="margin-top:-0.5rem">
     <div class="view-toggle">
-      <button class="view-btn active" id="viewByCategory" onclick="setViewMode('category')">依物品分類</button>
-      <button class="view-btn" id="viewByLocation" onclick="setViewMode('location')">依櫃子分類</button>
+      <button class="view-btn active" id="viewByCategory" onclick="setViewMode('category')" data-i18n="viewByCategory">依物品分類</button>
+      <button class="view-btn" id="viewByLocation" onclick="setViewMode('location')" data-i18n="viewByLocation">依櫃子分類</button>
     </div>
     <span></span>
   </div>
   <div id="logContainer">
-    <div class="empty-state" id="emptyState">還沒有任何紀錄，開始輸入或匯入檔案試試看</div>
+    <div class="empty-state" id="emptyState" data-i18n="emptyState">還沒有任何紀錄，開始輸入或匯入檔案試試看</div>
   </div>
 
   <div class="json-toggle" id="jsonToggle" onclick="toggleJsonView()" style="display:none">▾ 顯示原始 JSON 資料</div>
   <div class="json-box" id="jsonBox"></div>
 
-  <div class="footer">
+  <div class="footer" data-i18n-html="footerHtml">
     語音與資料皆在瀏覽器本地處理，重新整理頁面將清除紀錄（建議透過匯出 JSON 備份）。<br>
     本工具使用瀏覽器原生語音辨識 + Claude AI 語意解析，僅供技術驗證用途。
   </div>
@@ -662,14 +668,14 @@
 <div class="review-overlay" id="reviewOverlay">
   <div class="review-sheet">
     <div class="review-header">
-      <span class="review-title">確認辨識結果</span>
+      <span class="review-title" data-i18n="reviewTitle">確認辨識結果</span>
       <button class="review-close" onclick="closeReviewQueue()">✕</button>
     </div>
     <div class="review-subtitle" id="reviewSubtitle">請確認或修改以下內容，再加入庫存</div>
     <div id="reviewContainer"></div>
     <div class="review-actions">
-      <button class="review-cancel-btn" onclick="closeReviewQueue()">取消</button>
-      <button class="review-confirm-btn" id="reviewConfirmBtn" onclick="confirmReviewQueue()">確認加入庫存</button>
+      <button class="review-cancel-btn" onclick="closeReviewQueue()" data-i18n="reviewCancel">取消</button>
+      <button class="review-confirm-btn" id="reviewConfirmBtn" onclick="confirmReviewQueue()" data-i18n="reviewConfirm">確認加入庫存</button>
     </div>
   </div>
 </div>
@@ -746,13 +752,13 @@
       document.getElementById('provider-' + k).classList.toggle('active', k === key);
     });
     const p = PROVIDERS[key];
-    document.getElementById('corsNote').textContent = p.corsNote;
+    document.getElementById('corsNote').textContent = t('cors_' + key);
     document.getElementById('corsNote').className = 'settings-note' + (p.directCall ? '' : ' warn');
     document.getElementById('proxyField').style.display = p.directCall ? 'none' : 'block';
 
     // Populate model dropdown for this provider
     const modelSelect = document.getElementById('modelSelect');
-    modelSelect.innerHTML = p.models.map(m => `<option value="${m.id}">${m.label}</option>`).join('');
+    modelSelect.innerHTML = p.models.map(m => `<option value="${m.id}">${t('model_' + m.id)}</option>`).join('');
 
     // Preserve chosen model if switching back to same provider, else default to first model
     const stillValid = p.models.some(m => m.id === aiConfig.model);
@@ -798,16 +804,16 @@
   function updateSettingsStatus() {
     const statusEl = document.getElementById('settingsStatus');
     const ready = !!aiConfig.apiKey && (PROVIDERS[aiConfig.provider].directCall || !!aiConfig.proxyUrl);
-    const modelLabel = PROVIDERS[aiConfig.provider].models.find(m => m.id === aiConfig.model)?.label.split('（')[0] || aiConfig.model;
-    statusEl.textContent = ready ? `已設定 · ${PROVIDERS[aiConfig.provider].label} ${modelLabel}` : '未設定';
+    const modelLabel = t('model_' + aiConfig.model).split(/[（(]/)[0] || aiConfig.model;
+    statusEl.textContent = ready ? t('settingsReady', { provider: PROVIDERS[aiConfig.provider].label, model: modelLabel }) : t('settingsStatusMissing');
     statusEl.className = 'settings-status ' + (ready ? 'ok' : 'missing');
   }
 
   // Unified AI call — routes to the right provider format and handles direct vs proxy calls
   async function callAI(promptText, imageBase64, imageMime) {
     const p = PROVIDERS[aiConfig.provider];
-    if (!aiConfig.apiKey) throw new Error('請先在「AI 設定」中填入 API Key');
-    if (!p.directCall && !aiConfig.proxyUrl) throw new Error(`${p.label} 需要代理伺服器網址，請先在「AI 設定」中填入`);
+    if (!aiConfig.apiKey) throw new Error(t('errNeedApiKey'));
+    if (!p.directCall && !aiConfig.proxyUrl) throw new Error(t('errNeedProxy', { provider: p.label }));
 
     if (aiConfig.provider === 'gemini') {
       return callGeminiDirect(promptText, imageBase64, imageMime);
@@ -830,14 +836,12 @@
     });
     const data = await response.json();
     if (!response.ok) {
-      const msg = data.error?.message || `Gemini API 錯誤 ${response.status}`;
+      const msg = data.error?.message || t('errGemini', { status: response.status });
       const isQuota = response.status === 429 || /quota/i.test(msg);
-      throw new Error(isQuota
-        ? `額度已用完（${aiConfig.model}）。請到「AI 設定」切換其他 Gemini 模型再試一次，或稍候再用同一個模型。錯誤詳情：${msg}`
-        : msg);
+      throw new Error(isQuota ? t('errQuota', { model: aiConfig.model, msg }) : msg);
     }
     const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
-    if (!text) throw new Error('Gemini 回應為空：' + JSON.stringify(data));
+    if (!text) throw new Error(t('errGeminiEmpty') + JSON.stringify(data));
     return text;
   }
 
@@ -856,8 +860,8 @@
       })
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || `代理伺服器錯誤 ${response.status}`);
-    if (!data.text) throw new Error('代理伺服器回應格式異常，預期 { text: "..." }，收到：' + JSON.stringify(data));
+    if (!response.ok) throw new Error(data.error || t('errProxy', { status: response.status }));
+    if (!data.text) throw new Error(t('errProxyFormat') + JSON.stringify(data));
     return data.text;
   }
 
@@ -888,13 +892,13 @@
     if (mode === 'voice') {
       if (isRecording) stopRecording();
       btn.disabled = finalTranscript.trim().length === 0;
-      btn.textContent = 'AI 解析並建檔';
+      btn.textContent = t('processText');
     } else if (mode === 'text') {
       btn.disabled = document.getElementById('textInput').value.trim().length === 0;
-      btn.textContent = 'AI 解析並建檔';
+      btn.textContent = t('processText');
     } else {
       btn.disabled = !photoBase64;
-      btn.textContent = 'AI 辨識照片並建檔';
+      btn.textContent = t('processPhoto');
     }
   }
 
@@ -951,51 +955,372 @@
     document.getElementById('processBtn').disabled = true;
   }
 
-  const hints = {
-    'zh-TW': '例：「A1 廚房上層抽屜，電池三顆，快用完了」',
-    'en-US': 'e.g. "A1 kitchen top drawer, three batteries, running low"'
+  // ===== i18n：中英雙語（自動偵測系統語言 + 手動切換；選擇存於 localStorage 'homebase-lang'）=====
+  // 整合原本的 hints / textPlaceholders / textHints / statusIdle / statusRec /
+  // searchPlaceholders / photoTitles / photoHints 與 setLang('zh-TW'/'en-US') 機制，
+  // 統一為 I18N 字典 + t(key) + data-i18n 屬性。
+  const LANG_KEY = 'homebase-lang';
+  const I18N = {
+    'zh-TW': {
+      docTitle: "HomeBase · 語音建檔測試",
+      langToggleTitle: "切換語言",
+      badge: "語音建檔測試",
+      subtitle: "說出物品位置、名稱、數量，AI 自動整理成結構化庫存資料",
+      settingsTitle: "AI 設定",
+      settingsStatusMissing: "未設定",
+      settingsReady: "已設定 · {provider} {model}",
+      providerNeedProxy: "需要代理",
+      providerDirect: "✓ 可直連",
+      cors_claude: "Anthropic API 不允許瀏覽器直接呼叫（CORS 限制）。你需要一個小型代理伺服器轉發請求。下方「代理伺服器網址」請填你自己架設的代理位址，例如本地跑的 Node.js 轉發伺服器。",
+      cors_gemini: "Google Gemini API 目前允許瀏覽器直接呼叫，不需要代理伺服器。在 https://aistudio.google.com/apikey 申請免費 API Key。每個模型有各自獨立的免費額度，一個用完可以切換下一個。",
+      cors_deepseek: "DeepSeek API 不允許瀏覽器直接呼叫（CORS 限制）。你需要一個小型代理伺服器轉發請求到 https://api.deepseek.com/chat/completions。",
+      cors_grok: "xAI Grok API 不允許瀏覽器直接呼叫（CORS 限制）。你需要一個小型代理伺服器轉發請求到 https://api.x.ai/v1/chat/completions。",
+      "model_claude-sonnet-4-6": "Sonnet 4.6（推薦，平衡）",
+      "model_claude-opus-4-7": "Opus 4.7（最強，較貴）",
+      "model_claude-haiku-4-5-20251001": "Haiku 4.5（最快最便宜）",
+      "model_gemini-2.5-flash": "2.5 Flash（推薦，額度較高）",
+      "model_gemini-2.5-flash-lite": "2.5 Flash-Lite（額度最高，較簡單任務）",
+      "model_gemini-2.5-pro": "2.5 Pro（較強，額度較低）",
+      "model_gemini-2.0-flash": "2.0 Flash（舊版備用）",
+      "model_deepseek-chat": "DeepSeek Chat（推薦）",
+      "model_deepseek-reasoner": "DeepSeek Reasoner（較慢，推理較強）",
+      "model_grok-2-latest": "Grok 2（推薦）",
+      "model_grok-2-vision-latest": "Grok 2 Vision（含圖片辨識）",
+      labelModel: "模型",
+      labelProxy: "代理伺服器網址（需要代理的供應商）",
+      proxyPlaceholder: "例如：http://localhost:3000/api/chat",
+      apiKeyPlaceholder: "貼上你的 API Key",
+      settingsNoteKey: "API Key 僅儲存在你瀏覽器的 localStorage，不會上傳到任何伺服器。重新整理頁面不會消失，但換瀏覽器或清除快取會消失。",
+      btnSaveSettings: "儲存設定",
+      btnClearSettings: "清除",
+      inputVoice: "🎙️ 語音輸入",
+      inputText: "⌨️ 文字輸入",
+      inputPhoto: "📷 拍照輸入",
+      searchPlaceholder: "找東西，例如：眼鏡在哪裡？",
+      searchBtn: "搜尋",
+      searching: "搜尋中⋯",
+      micHint: "例：「A1 廚房上層抽屜，電池三顆，快用完了」",
+      statusIdle: "點擊開始錄音",
+      statusRec: "正在聆聽⋯⋯點擊停止",
+      transcriptLabel: "語音辨識結果",
+      textPlaceholder: "輸入物品位置、名稱、數量、備註，例如：A1 廚房上層抽屜，電池三顆，快用完了，還有剪刀一個",
+      textHint: "可一次輸入多筆，AI 會自動拆解每個物品",
+      photoTitle: "拍照或選擇相簿照片",
+      photoHint: "拍下櫃子、抽屜內部，AI 會自動辨識物品並建檔",
+      photoReselect: "✕ 重新選擇",
+      photoPreviewAlt: "預覽",
+      photoSourceLabel: "（來自照片辨識）",
+      processText: "AI 解析並建檔",
+      processPhoto: "AI 辨識照片並建檔",
+      loadingParsing: "AI 正在解析語意⋯⋯",
+      loadingPhoto: "AI 正在辨識照片中的物品⋯⋯",
+      historyTitle: "歷史紀錄",
+      historyCount: "{n} 筆",
+      historyEmpty: "還沒有任何輸入紀錄",
+      historyUndone: "（已復原）",
+      historyUndoneBtn: "已復原",
+      historyUndoBtn: "↩ 復原這批",
+      historyUndoConfirm: "確定要從庫存中移除這一批 {n} 項物品嗎？",
+      logTitle: "庫存紀錄",
+      btnImportJson: "⬆ 匯入 JSON",
+      btnExportJson: "⬇ 匯出 JSON",
+      btnClearLog: "清空",
+      viewByCategory: "依物品分類",
+      viewByLocation: "依櫃子分類",
+      emptyState: "還沒有任何紀錄，開始輸入或匯入檔案試試看",
+      jsonShow: "▾ 顯示原始 JSON 資料",
+      jsonHide: "▴ 隱藏原始 JSON 資料",
+      footerHtml: "語音與資料皆在瀏覽器本地處理，重新整理頁面將清除紀錄（建議透過匯出 JSON 備份）。<br>本工具使用瀏覽器原生語音辨識 + Claude AI 語意解析，僅供技術驗證用途。",
+      reviewTitle: "確認辨識結果",
+      reviewSubtitle: "共辨識出 {n} 項物品，請確認或修改後加入庫存",
+      reviewCancel: "取消",
+      reviewConfirm: "確認加入庫存",
+      reviewEmpty: "沒有項目了，按「取消」關閉視窗",
+      reviewRemove: "✕ 移除",
+      reviewLocId: "位置代號",
+      reviewLocIdPh: "例如 A1",
+      reviewLocLabel: "位置描述",
+      reviewLocLabelPh: "例如 廚房抽屜",
+      reviewItemName: "物品名稱",
+      reviewCategory: "類別",
+      reviewQtyUnit: "數量／單位",
+      reviewQtyPh: "數量",
+      reviewUnitPh: "單位",
+      reviewNote: "備註",
+      reviewNotePh: "例如 快用完了",
+      reviewPlacedAt: "放入／購買時間（口語描述，選填）",
+      reviewPlacedAtPh: "例如 上禮拜、今天、上個月",
+      treeNotePrefix: "備註：",
+      treeItemCount: "{n} 項",
+      groupUncategorized: "未分類位置",
+      importSuccess: "成功匯入 {n} 筆庫存紀錄！",
+      importBadFormat: "JSON 格式必須為陣列物件 [ ... ]",
+      importFail: "匯入失敗，請確保上傳的是正確的 HomeBase 備份 JSON 檔案。錯誤訊息: ",
+      clearLogConfirm: "確定要清空所有紀錄嗎？清空前請確保已匯出備份。",
+      searchNoData: "目前還沒有任何庫存紀錄，請先新增物品。",
+      searchFail: "搜尋失敗：",
+      searchNotFoundFallback: "找不到相關物品",
+      errNoSpeech: "您的瀏覽器不支援語音辨識，請使用 Chrome 或 Safari（建議手機版 Chrome / 桌面版 Chrome 或 Edge）。",
+      errSpeech: "語音辨識錯誤：",
+      errPhotoEmpty: "AI 未能從照片中辨識出明確的物品，請換個角度或更近距離拍攝後再試一次。",
+      errTextEmpty: "AI 未能從內容中解析出物品，請換個方式描述後再試一次。",
+      errParseFail: "解析失敗：",
+      errNoJson: "AI 未回傳有效 JSON：",
+      errBadAiFormat: "AI 回應格式異常",
+      errNeedApiKey: "請先在「AI 設定」中填入 API Key",
+      errNeedProxy: "{provider} 需要代理伺服器網址，請先在「AI 設定」中填入",
+      errGemini: "Gemini API 錯誤 {status}",
+      errQuota: "額度已用完（{model}）。請到「AI 設定」切換其他 Gemini 模型再試一次，或稍候再用同一個模型。錯誤詳情：{msg}",
+      errGeminiEmpty: "Gemini 回應為空：",
+      errProxy: "代理伺服器錯誤 {status}",
+      errProxyFormat: "代理伺服器回應格式異常，預期 { text: \"...\" }，收到：",
+      promptLangName: "中文",
+      promptLangLine: "請以繁體中文輸出所有文字內容（物品名稱、備註、位置描述等所有欄位值）。",
+      cat0: "文具", cat1: "電子用品", cat2: "清潔用品", cat3: "廚房用品",
+      cat4: "衛浴用品", cat5: "食品", cat6: "衣物", cat7: "工具",
+      cat8: "配件", cat9: "文件", cat10: "玩具", cat11: "其他"
+    },
+    'en': {
+      docTitle: "HomeBase · Voice Inventory Demo",
+      langToggleTitle: "Switch language",
+      badge: "Voice Inventory Demo",
+      subtitle: "Speak or type item locations, names, and quantities — AI organizes them into structured inventory data",
+      settingsTitle: "AI Settings",
+      settingsStatusMissing: "Not set",
+      settingsReady: "Set · {provider} {model}",
+      providerNeedProxy: "Needs proxy",
+      providerDirect: "✓ Direct",
+      cors_claude: "The Anthropic API does not allow direct calls from browsers (CORS restriction). You need a small proxy server to forward requests. Enter your own proxy address in \"Proxy server URL\" below, e.g. a locally running Node.js forwarding server.",
+      cors_gemini: "The Google Gemini API currently allows direct calls from browsers — no proxy needed. Get a free API key at https://aistudio.google.com/apikey. Each model has its own free quota; switch to another model when one runs out.",
+      cors_deepseek: "The DeepSeek API does not allow direct calls from browsers (CORS restriction). You need a small proxy server to forward requests to https://api.deepseek.com/chat/completions.",
+      cors_grok: "The xAI Grok API does not allow direct calls from browsers (CORS restriction). You need a small proxy server to forward requests to https://api.x.ai/v1/chat/completions.",
+      "model_claude-sonnet-4-6": "Sonnet 4.6 (recommended, balanced)",
+      "model_claude-opus-4-7": "Opus 4.7 (most capable, pricier)",
+      "model_claude-haiku-4-5-20251001": "Haiku 4.5 (fastest & cheapest)",
+      "model_gemini-2.5-flash": "2.5 Flash (recommended, higher quota)",
+      "model_gemini-2.5-flash-lite": "2.5 Flash-Lite (highest quota, simpler tasks)",
+      "model_gemini-2.5-pro": "2.5 Pro (stronger, lower quota)",
+      "model_gemini-2.0-flash": "2.0 Flash (older fallback)",
+      "model_deepseek-chat": "DeepSeek Chat (recommended)",
+      "model_deepseek-reasoner": "DeepSeek Reasoner (slower, stronger reasoning)",
+      "model_grok-2-latest": "Grok 2 (recommended)",
+      "model_grok-2-vision-latest": "Grok 2 Vision (with image recognition)",
+      labelModel: "Model",
+      labelProxy: "Proxy server URL (for providers that need one)",
+      proxyPlaceholder: "e.g. http://localhost:3000/api/chat",
+      apiKeyPlaceholder: "Paste your API key",
+      settingsNoteKey: "Your API key is stored only in this browser's localStorage and never uploaded to any server. It survives page refreshes, but will be lost if you switch browsers or clear site data.",
+      btnSaveSettings: "Save settings",
+      btnClearSettings: "Clear",
+      inputVoice: "🎙️ Voice input",
+      inputText: "⌨️ Text input",
+      inputPhoto: "📷 Photo input",
+      searchPlaceholder: "Find something, e.g. \"Where are my glasses?\"",
+      searchBtn: "Search",
+      searching: "Searching…",
+      micHint: "e.g. \"A1 kitchen top drawer, three batteries, running low\"",
+      statusIdle: "Tap to start recording",
+      statusRec: "Listening… tap to stop",
+      transcriptLabel: "Speech recognition result",
+      textPlaceholder: "Enter item locations, names, quantities, notes — e.g. \"A1 kitchen top drawer, three batteries, running low, plus one pair of scissors\"",
+      textHint: "You can enter multiple items at once — AI will split them automatically",
+      photoTitle: "Take a photo or choose from your library",
+      photoHint: "Photograph the inside of a cabinet or drawer — AI will identify items automatically",
+      photoReselect: "✕ Reselect",
+      photoPreviewAlt: "Preview",
+      photoSourceLabel: "(from photo recognition)",
+      processText: "Parse with AI & save",
+      processPhoto: "Recognize photo with AI & save",
+      loadingParsing: "AI is parsing…",
+      loadingPhoto: "AI is identifying items in the photo…",
+      historyTitle: "History",
+      historyCount: "{n} entries",
+      historyEmpty: "No input history yet",
+      historyUndone: "(undone)",
+      historyUndoneBtn: "Undone",
+      historyUndoBtn: "↩ Undo this batch",
+      historyUndoConfirm: "Remove this batch of {n} items from the inventory?",
+      logTitle: "Inventory",
+      btnImportJson: "⬆ Import JSON",
+      btnExportJson: "⬇ Export JSON",
+      btnClearLog: "Clear",
+      viewByCategory: "By category",
+      viewByLocation: "By location",
+      emptyState: "No records yet — try entering items or importing a file",
+      jsonShow: "▾ Show raw JSON data",
+      jsonHide: "▴ Hide raw JSON data",
+      footerHtml: "Voice and data are processed locally in your browser; refreshing the page clears records (back up via JSON export).<br>This tool uses the browser's built-in speech recognition + Claude AI semantic parsing, for technical validation only.",
+      reviewTitle: "Confirm recognized items",
+      reviewSubtitle: "Found {n} items — please confirm or edit before adding to inventory",
+      reviewCancel: "Cancel",
+      reviewConfirm: "Confirm & add to inventory",
+      reviewEmpty: "No items left — press \"Cancel\" to close",
+      reviewRemove: "✕ Remove",
+      reviewLocId: "Location code",
+      reviewLocIdPh: "e.g. A1",
+      reviewLocLabel: "Location description",
+      reviewLocLabelPh: "e.g. kitchen drawer",
+      reviewItemName: "Item name",
+      reviewCategory: "Category",
+      reviewQtyUnit: "Quantity / unit",
+      reviewQtyPh: "Quantity",
+      reviewUnitPh: "Unit",
+      reviewNote: "Note",
+      reviewNotePh: "e.g. running low",
+      reviewPlacedAt: "Placed/purchased time (spoken description, optional)",
+      reviewPlacedAtPh: "e.g. last week, today, last month",
+      treeNotePrefix: "Note: ",
+      treeItemCount: "{n} items",
+      groupUncategorized: "Uncategorized",
+      importSuccess: "Successfully imported {n} inventory records!",
+      importBadFormat: "JSON must be an array of objects [ ... ]",
+      importFail: "Import failed — please make sure the file is a valid HomeBase backup JSON. Error: ",
+      clearLogConfirm: "Clear all records? Make sure you have exported a backup first.",
+      searchNoData: "No inventory records yet — please add items first.",
+      searchFail: "Search failed: ",
+      searchNotFoundFallback: "No matching items found",
+      errNoSpeech: "Your browser does not support speech recognition. Please use Chrome or Safari (mobile Chrome, or desktop Chrome / Edge recommended).",
+      errSpeech: "Speech recognition error: ",
+      errPhotoEmpty: "AI could not identify any clear items in the photo. Try a different angle or a closer shot.",
+      errTextEmpty: "AI could not parse any items from the content. Try describing it differently.",
+      errParseFail: "Parse failed: ",
+      errNoJson: "AI did not return valid JSON: ",
+      errBadAiFormat: "AI response format error",
+      errNeedApiKey: "Please enter your API key in \"AI Settings\" first",
+      errNeedProxy: "{provider} needs a proxy server URL — please enter it in \"AI Settings\" first",
+      errGemini: "Gemini API error {status}",
+      errQuota: "Quota exhausted ({model}). Switch to another Gemini model in \"AI Settings\" and try again, or wait before reusing the same model. Details: {msg}",
+      errGeminiEmpty: "Gemini returned an empty response: ",
+      errProxy: "Proxy server error {status}",
+      errProxyFormat: "Proxy server returned an unexpected format, expected { text: \"...\" }, got: ",
+      promptLangName: "English",
+      promptLangLine: "Output ALL text content in English (item names, notes, location descriptions, and all other field values).",
+      cat0: "Stationery", cat1: "Electronics", cat2: "Cleaning supplies", cat3: "Kitchenware",
+      cat4: "Bathroom supplies", cat5: "Food", cat6: "Clothing", cat7: "Tools",
+      cat8: "Accessories", cat9: "Documents", cat10: "Toys", cat11: "Other"
+    }
   };
-  const textPlaceholders = {
-    'zh-TW': '輸入物品位置、名稱、數量、備註，例如：A1 廚房上層抽屜，電池三顆，快用完了，還有剪刀一個',
-    'en-US': 'Enter location, item, quantity, notes — e.g. "A1 kitchen top drawer, three batteries, running low, also one pair of scissors"'
-  };
-  const textHints = {
-    'zh-TW': '可一次輸入多筆，AI 會自動拆解每個物品',
-    'en-US': 'You can enter multiple items at once — AI will split them automatically'
-  };
-  const statusIdle = { 'zh-TW': '點擊開始錄音', 'en-US': 'Tap to start recording' };
-  const statusRec = { 'zh-TW': '正在聆聽⋯⋯點擊停止', 'en-US': 'Listening... tap to stop' };
 
-  const searchPlaceholders = {
-    'zh-TW': '找東西，例如：眼鏡在哪裡？',
-    'en-US': 'Find something, e.g. "Where are my glasses?"'
-  };
-  const photoTitles = {
-    'zh-TW': '拍照或選擇相簿照片',
-    'en-US': 'Take a photo or choose from library'
-  };
-  const photoHints = {
-    'zh-TW': '拍下櫃子、抽屜內部，AI 會自動辨識物品並建檔',
-    'en-US': 'Photograph inside a drawer or cabinet — AI will identify items automatically'
-  };
+  function t(key, vars) {
+    let s = (I18N[currentLang] && I18N[currentLang][key] !== undefined)
+      ? I18N[currentLang][key]
+      : (I18N['zh-TW'][key] !== undefined ? I18N['zh-TW'][key] : key);
+    if (vars) {
+      for (const k of Object.keys(vars)) s = s.split('{' + k + '}').join(String(vars[k]));
+    }
+    return s;
+  }
 
-  function setLang(lang) {
+  function detectLang() {
+    try {
+      const saved = localStorage.getItem(LANG_KEY);
+      if (saved === 'zh-TW' || saved === 'en') return saved;
+    } catch (e) { /* ignore */ }
+    const nav = (navigator.language || 'en').toLowerCase();
+    if (nav.indexOf('zh') === 0) return 'zh-TW';
+    if (nav.indexOf('en') === 0) return 'en';
+    return 'en';
+  }
+
+  function toggleLang() {
+    applyLang(currentLang === 'zh-TW' ? 'en' : 'zh-TW');
+  }
+
+  function categoryOptions() {
+    const a = [];
+    for (let i = 0; i < 12; i++) a.push(t('cat' + i));
+    return a;
+  }
+
+  function normalizeCategory(v) {
+    for (let i = 0; i < 12; i++) {
+      if (v === I18N['zh-TW']['cat' + i] || v === I18N['en']['cat' + i]) return t('cat' + i);
+    }
+    return t('cat11');
+  }
+
+  const CATEGORY_ICONS = ['✏️', '🔌', '🧴', '🍳', '🧻', '🥫', '👕', '🔧', '👓', '📄', '🧸', '📦'];
+
+  function categoryIcon(name) {
+    for (let i = 0; i < 12; i++) {
+      if (name === I18N['zh-TW']['cat' + i] || name === I18N['en']['cat' + i]) return CATEGORY_ICONS[i];
+    }
+    return '📦';
+  }
+
+  function buildEntrySchema() {
+    const cats = categoryOptions().join('、');
+    if (currentLang === 'zh-TW') {
+      return `{
+  "entries": [
+    {
+      "location_id": "位置代號，例如 A1，若使用者沒說則留空字串",
+      "location_label": "位置的口語描述，例如「廚房上層抽屜」，若沒提到則留空字串",
+      "item": "物品名稱",
+      "category": "物品種類，從以下選擇最貼切的一個：${cats}",
+      "quantity": 數字，若無法判斷確切數量則填 null,
+      "unit": "單位，例如顆、個、瓶、包，若不明顯則留空字串",
+      "note": "備註，例如「快用完了」、「壞掉了」，若沒有則留空字串",
+      "placed_at_raw": "使用者口語中提到關於『這個物品是何時放入/購買/取得』的原始描述，例如「上禮拜買的」「今天放的」「上個月」，若完全沒提到則留空字串"
+    }
+  ]
+}`;
+    }
+    return `{
+  "entries": [
+    {
+      "location_id": "Location code, e.g. A1; leave as an empty string if the user did not mention one",
+      "location_label": "Spoken description of the location, e.g. \\"kitchen top drawer\\"; empty string if not mentioned",
+      "item": "Item name",
+      "category": "Item category, pick the closest one from: ${cats}",
+      "quantity": a number, or null if the exact quantity cannot be determined,
+      "unit": "Unit, e.g. pcs, bottles, packs; empty string if unclear",
+      "note": "Note, e.g. \\"running low\\", \\"broken\\"; empty string if none",
+      "placed_at_raw": "The user's original spoken description of when the item was placed, bought, or obtained, e.g. \\"last week\\" \\"today\\" \\"last month\\"; empty string if not mentioned at all"
+    }
+  ]
+}`;
+  }
+
+  function applyLang(lang) {
     currentLang = lang;
-    document.getElementById('langZh').classList.toggle('active', lang === 'zh-TW');
-    document.getElementById('langEn').classList.toggle('active', lang === 'en-US');
-    document.getElementById('micHint').textContent = hints[lang];
-    document.getElementById('micStatus').textContent = isRecording ? statusRec[lang] : statusIdle[lang];
-    document.getElementById('textInput').placeholder = textPlaceholders[lang];
-    document.getElementById('textHintLabel').textContent = textHints[lang];
-    document.getElementById('searchInput').placeholder = searchPlaceholders[lang];
-    document.getElementById('photoUploadTitle').textContent = photoTitles[lang];
-    document.getElementById('photoUploadHint').textContent = photoHints[lang];
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* ignore */ }
+    document.documentElement.lang = lang === 'zh-TW' ? 'zh-TW' : 'en';
+    document.title = t('docTitle');
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.getAttribute('data-i18n-html')); });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-placeholder')); });
+    document.querySelectorAll('[data-i18n-alt]').forEach(el => { el.alt = t(el.getAttribute('data-i18n-alt')); });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.getAttribute('data-i18n-title')); });
+    const langToggle = document.getElementById('langToggle');
+    if (langToggle) langToggle.textContent = lang === 'zh-TW' ? 'EN' : '中文';
+    // 動態提示字串（原本的 hints / textPlaceholders / textHints / statusIdle / statusRec /
+    // searchPlaceholders / photoTitles / photoHints 全部收斂到這裡）
+    document.getElementById('micHint').textContent = t('micHint');
+    document.getElementById('micStatus').textContent = isRecording ? t('statusRec') : t('statusIdle');
+    document.getElementById('textInput').placeholder = t('textPlaceholder');
+    document.getElementById('textHintLabel').textContent = t('textHint');
+    document.getElementById('searchInput').placeholder = t('searchPlaceholder');
+    document.getElementById('photoUploadTitle').textContent = t('photoTitle');
+    document.getElementById('photoUploadHint').textContent = t('photoHint');
+    document.getElementById('processBtn').textContent = currentInputMode === 'photo' ? t('processPhoto') : t('processText');
+    const loadingBox = document.getElementById('loading');
+    const loadingLabel = document.querySelector('#loading span');
+    if (loadingLabel && !loadingBox.classList.contains('show')) loadingLabel.textContent = t('loadingParsing');
+    const jsonToggle = document.getElementById('jsonToggle');
+    const jsonBox = document.getElementById('jsonBox');
+    if (jsonToggle && jsonBox) jsonToggle.textContent = jsonBox.classList.contains('show') ? t('jsonHide') : t('jsonShow');
+    updateSettingsStatus();
+    if (typeof selectProvider === 'function' && aiConfig) selectProvider(aiConfig.provider, true);
+    renderHistory();
+    renderLog();
+    if (document.getElementById('reviewOverlay').classList.contains('show')) renderReviewQueue();
   }
 
   function initRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      showError('您的瀏覽器不支援語音辨識，請使用 Chrome 或 Safari（建議手機版 Chrome / 桌面版 Chrome 或 Edge）。');
+      showError(t('errNoSpeech'));
       document.getElementById('micBtn').disabled = true;
       return null;
     }
@@ -1023,7 +1348,7 @@
 
     rec.onerror = (event) => {
       if (event.error === 'no-speech') return;
-      showError('語音辨識錯誤：' + event.error);
+      showError(t('errSpeech') + event.error);
       stopRecording();
     };
 
@@ -1052,7 +1377,7 @@
     recognition.start();
     document.getElementById('micBtn').classList.add('recording');
     document.getElementById('micBtn').textContent = '⏹';
-    document.getElementById('micStatus').textContent = statusRec[currentLang];
+    document.getElementById('micStatus').textContent = t('statusRec');
     document.getElementById('waveform').classList.add('show');
     document.getElementById('errorBox').classList.remove('show');
   }
@@ -1062,7 +1387,7 @@
     if (recognition) recognition.stop();
     document.getElementById('micBtn').classList.remove('recording');
     document.getElementById('micBtn').textContent = '🎙️';
-    document.getElementById('micStatus').textContent = statusIdle[currentLang];
+    document.getElementById('micStatus').textContent = t('statusIdle');
     document.getElementById('waveform').classList.remove('show');
   }
 
@@ -1089,34 +1414,22 @@
     const loadingLabel = document.querySelector('#loading span');
     btn.disabled = true;
     loading.classList.add('show');
-    if (loadingLabel) loadingLabel.textContent = isPhotoMode ? 'AI 正在辨識照片中的物品⋯⋯' : 'AI 正在解析語意⋯⋯';
+    if (loadingLabel) loadingLabel.textContent = isPhotoMode ? t('loadingPhoto') : t('loadingParsing');
     document.getElementById('errorBox').classList.remove('show');
 
     // Capture timing before reset
     const submittedAt = new Date().toISOString();
     const startedAt = inputStartedAt || submittedAt;
 
-    const entrySchema = `{
-  "entries": [
-    {
-      "location_id": "位置代號，例如 A1，若使用者沒說則留空字串",
-      "location_label": "位置的口語描述，例如「廚房上層抽屜」，若沒提到則留空字串",
-      "item": "物品名稱",
-      "category": "物品種類，從以下選擇最貼切的一個：文具、電子用品、清潔用品、廚房用品、衛浴用品、食品、衣物、工具、配件、文件、玩具、其他",
-      "quantity": 數字，若無法判斷確切數量則填 null,
-      "unit": "單位，例如顆、個、瓶、包，若不明顯則留空字串",
-      "note": "備註，例如「快用完了」、「壞掉了」，若沒有則留空字串",
-      "placed_at_raw": "使用者口語中提到關於『這個物品是何時放入/購買/取得』的原始描述，例如「上禮拜買的」「今天放的」「上個月」，若完全沒提到則留空字串"
-    }
-  ]
-}`;
+    const entrySchema = buildEntrySchema();
 
     const prompt = isPhotoMode
       ? `你是一個家庭庫存視覺辨識 AI。使用者拍了一張櫃子、抽屜或收納空間的照片，請仔細辨識照片中所有清晰可見的物品。
 
-使用者語言：${currentLang === 'zh-TW' ? '中文' : '英文'}
+使用者語言：${t('promptLangName')}
+${t('promptLangLine')}
 
-請以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記，所有文字內容請用${currentLang === 'zh-TW' ? '繁體中文' : '英文'}）：
+請以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記）：
 
 ${entrySchema}
 
@@ -1129,7 +1442,8 @@ ${entrySchema}
 - 如果照片中完全沒有可辨識的物品，回傳 {"entries": []}`
       : `你是一個家庭庫存語音解析 AI。使用者用口語描述他們整理家中物品的內容，可能包含位置代號、物品名稱、數量、備註。
 
-使用者語言：${currentLang === 'zh-TW' ? '中文' : '英文'}
+使用者語言：${t('promptLangName')}
+${t('promptLangLine')}
 原始語音轉文字內容：「${text}」
 
 請解析出其中提到的所有物品條目，以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記）：
@@ -1144,21 +1458,19 @@ ${entrySchema}
         : await callAI(prompt);
 
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('AI 未回傳有效 JSON：' + rawText);
+      if (!jsonMatch) throw new Error(t('errNoJson') + rawText);
 
       const parsed = JSON.parse(jsonMatch[0]);
       const newEntries = parsed.entries || [];
 
       if (newEntries.length === 0) {
-        showError(isPhotoMode
-          ? 'AI 未能從照片中辨識出明確的物品，請換個角度或更近距離拍攝後再試一次。'
-          : 'AI 未能從內容中解析出物品，請換個方式描述後再試一次。');
+        showError(isPhotoMode ? t('errPhotoEmpty') : t('errTextEmpty'));
         return;
       }
 
       openReviewQueue(
         newEntries,
-        isPhotoMode ? '（來自照片辨識）' : text,
+        isPhotoMode ? t('photoSourceLabel') : text,
         isPhotoMode ? 'photo' : currentInputMode,
         { startedAt, submittedAt }
       );
@@ -1173,7 +1485,7 @@ ${entrySchema}
       document.getElementById('processBtn').disabled = true;
 
     } catch (err) {
-      showError('解析失敗：' + err.message);
+      showError(t('errParseFail') + err.message);
     } finally {
       loading.classList.remove('show');
       btn.disabled = false;
@@ -1183,22 +1495,21 @@ ${entrySchema}
   }
 
   // ===== Review Queue (confirm before adding to inventory) =====
-  const categoryOptions = ['文具', '電子用品', '清潔用品', '廚房用品', '衛浴用品', '食品', '衣物', '工具', '配件', '文件', '玩具', '其他'];
+  // categoryOptions 已移至 i18n 區塊（categoryOptions() / normalizeCategory()），此處保留空行以維持結構
 
   function openReviewQueue(newEntries, sourceLabel, source, timing) {
     reviewQueue = newEntries.map(e => ({
       location_id: e.location_id || '',
       location_label: e.location_label || '',
       item: e.item || '',
-      category: categoryOptions.includes(e.category) ? e.category : '其他',
+      category: normalizeCategory(e.category),
       quantity: (e.quantity === null || e.quantity === undefined) ? '' : e.quantity,
       unit: e.unit || '',
       note: e.note || '',
       placed_at_raw: e.placed_at_raw || ''
     }));
     reviewMeta = { sourceLabel, source, timing: timing || {} };
-    document.getElementById('reviewSubtitle').textContent =
-      `共辨識出 ${reviewQueue.length} 項物品，請確認或修改後加入庫存`;
+    document.getElementById('reviewSubtitle').textContent = t('reviewSubtitle', { n: reviewQueue.length });
     renderReviewQueue();
     document.getElementById('reviewOverlay').classList.add('show');
   }
@@ -1213,7 +1524,7 @@ ${entrySchema}
     const confirmBtn = document.getElementById('reviewConfirmBtn');
 
     if (reviewQueue.length === 0) {
-      container.innerHTML = `<div class="review-empty">沒有項目了，按「取消」關閉視窗</div>`;
+      container.innerHTML = `<div class="review-empty">${t('reviewEmpty')}</div>`;
       confirmBtn.disabled = true;
       return;
     }
@@ -1222,49 +1533,49 @@ ${entrySchema}
     container.innerHTML = reviewQueue.map((e, i) => `
       <div class="review-item">
         <div class="review-item-top">
-          <button class="review-item-remove" onclick="removeReviewItem(${i})">✕ 移除</button>
+          <button class="review-item-remove" onclick="removeReviewItem(${i})">${t('reviewRemove')}</button>
         </div>
         <div class="review-field-row">
           <div class="review-field">
-            <label>位置代號</label>
-            <input type="text" value="${escapeAttr(e.location_id)}" placeholder="例如 A1" oninput="updateReviewField(${i}, 'location_id', this.value)">
+            <label>${t('reviewLocId')}</label>
+            <input type="text" value="${escapeAttr(e.location_id)}" placeholder="${t('reviewLocIdPh')}" oninput="updateReviewField(${i}, 'location_id', this.value)">
           </div>
           <div class="review-field">
-            <label>位置描述</label>
-            <input type="text" value="${escapeAttr(e.location_label)}" placeholder="例如 廚房抽屜" oninput="updateReviewField(${i}, 'location_label', this.value)">
+            <label>${t('reviewLocLabel')}</label>
+            <input type="text" value="${escapeAttr(e.location_label)}" placeholder="${t('reviewLocLabelPh')}" oninput="updateReviewField(${i}, 'location_label', this.value)">
           </div>
         </div>
         <div class="review-field-row">
           <div class="review-field full">
-            <label>物品名稱</label>
+            <label>${t('reviewItemName')}</label>
             <input type="text" value="${escapeAttr(e.item)}" oninput="updateReviewField(${i}, 'item', this.value)">
           </div>
         </div>
         <div class="review-field-row">
           <div class="review-field">
-            <label>類別</label>
+            <label>${t('reviewCategory')}</label>
             <select onchange="updateReviewField(${i}, 'category', this.value)">
-              ${categoryOptions.map(c => `<option value="${c}" ${c === e.category ? 'selected' : ''}>${c}</option>`).join('')}
+              ${categoryOptions().map(c => `<option value="${c}" ${c === e.category ? 'selected' : ''}>${c}</option>`).join('')}
             </select>
           </div>
           <div class="review-field">
-            <label>數量／單位</label>
+            <label>${t('reviewQtyUnit')}</label>
             <div class="review-qty-row">
-              <input type="number" value="${escapeAttr(e.quantity)}" placeholder="數量" oninput="updateReviewField(${i}, 'quantity', this.value)">
-              <input type="text" value="${escapeAttr(e.unit)}" placeholder="單位" oninput="updateReviewField(${i}, 'unit', this.value)">
+              <input type="number" value="${escapeAttr(e.quantity)}" placeholder="${t('reviewQtyPh')}" oninput="updateReviewField(${i}, 'quantity', this.value)">
+              <input type="text" value="${escapeAttr(e.unit)}" placeholder="${t('reviewUnitPh')}" oninput="updateReviewField(${i}, 'unit', this.value)">
             </div>
           </div>
         </div>
         <div class="review-field-row">
           <div class="review-field full">
-            <label>備註</label>
-            <input type="text" value="${escapeAttr(e.note)}" placeholder="例如 快用完了" oninput="updateReviewField(${i}, 'note', this.value)">
+            <label>${t('reviewNote')}</label>
+            <input type="text" value="${escapeAttr(e.note)}" placeholder="${t('reviewNotePh')}" oninput="updateReviewField(${i}, 'note', this.value)">
           </div>
         </div>
         <div class="review-field-row">
           <div class="review-field full">
-            <label>放入／購買時間（口語描述，選填）</label>
-            <input type="text" value="${escapeAttr(e.placed_at_raw)}" placeholder="例如 上禮拜、今天、上個月" oninput="updateReviewField(${i}, 'placed_at_raw', this.value)">
+            <label>${t('reviewPlacedAt')}</label>
+            <input type="text" value="${escapeAttr(e.placed_at_raw)}" placeholder="${t('reviewPlacedAtPh')}" oninput="updateReviewField(${i}, 'placed_at_raw', this.value)">
           </div>
         </div>
       </div>
@@ -1335,7 +1646,7 @@ ${entrySchema}
   function renderHistory() {
     const container = document.getElementById('historyContainer');
     const empty = document.getElementById('historyEmpty');
-    document.getElementById('historyCount').textContent = `${historyLog.length} 筆`;
+    document.getElementById('historyCount').textContent = t('historyCount', { n: historyLog.length });
 
     if (historyLog.length === 0) {
       container.innerHTML = '';
@@ -1344,7 +1655,7 @@ ${entrySchema}
     }
 
     container.innerHTML = historyLog.map(h => {
-      const time = new Date(h.timestamp).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const time = new Date(h.timestamp).toLocaleString(currentLang === 'zh-TW' ? 'zh-TW' : 'en-US', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       const icon = sourceIcons[h.source] || '📝';
       const itemNames = h.items.map(e => e.item).join('、');
       return `
@@ -1352,12 +1663,12 @@ ${entrySchema}
           <div class="history-entry-top">
             <span class="history-entry-icon">${icon}</span>
             <span class="history-entry-time">${time}</span>
-            <span class="history-entry-count">${h.items.length} 項</span>
+            <span class="history-entry-count">${t('treeItemCount', { n: h.items.length })}</span>
           </div>
-          <div class="history-entry-items">${h.undone ? '（已復原）' : itemNames}</div>
+          <div class="history-entry-items">${h.undone ? t('historyUndone') : itemNames}</div>
           <div class="history-entry-actions">
             <button class="history-undo-btn" ${h.undone ? 'disabled' : ''} onclick="undoHistoryBatch('${h.id}')">
-              ${h.undone ? '已復原' : '↩ 復原這批'}
+              ${h.undone ? t('historyUndoneBtn') : t('historyUndoBtn')}
             </button>
           </div>
         </div>
@@ -1368,7 +1679,7 @@ ${entrySchema}
   function undoHistoryBatch(id) {
     const batch = historyLog.find(h => h.id === id);
     if (!batch || batch.undone) return;
-    if (!confirm(`確定要從庫存中移除這一批 ${batch.items.length} 項物品嗎？`)) return;
+    if (!confirm(t('historyUndoConfirm', { n: batch.items.length }))) return;
 
     // Remove entries that match this batch by reference identity via timestamp+item+location combo
     batch.items.forEach(target => {
@@ -1397,19 +1708,13 @@ ${entrySchema}
     renderLog();
   }
 
-  const categoryIcons = {
-    '文具': '✏️', '電子用品': '🔌', '清潔用品': '🧴', '廚房用品': '🍳',
-    '衛浴用品': '🧻', '食品': '🥫', '衣物': '👕', '工具': '🔧',
-    '配件': '👓', '文件': '📄', '玩具': '🧸', '其他': '📦'
-  };
-
   function groupKey(entry) {
     if (currentViewMode === 'category') {
-      return entry.category || '其他';
+      return entry.category || t('cat11');
     } else {
       return entry.location_id
         ? `${entry.location_id}${entry.location_label ? ' · ' + entry.location_label : ''}`
-        : (entry.location_label || '未分類位置');
+        : (entry.location_label || t('groupUncategorized'));
     }
   }
 
@@ -1439,14 +1744,14 @@ ${entrySchema}
     container.innerHTML = sortedKeys.map(key => {
       const items = groups[key];
       const isExpanded = expandedGroups.has(key);
-      const icon = currentViewMode === 'category' ? (categoryIcons[key] || '📦') : '🗄️';
+      const icon = currentViewMode === 'category' ? categoryIcon(key) : '🗄️';
 
       const itemRows = items.map(e => `
         <div class="tree-item-row">
           ${currentViewMode === 'category' && e.location_id ? `<span class="tree-item-loc">${e.location_id}</span>` : ''}
           <span class="tree-item-name">${e.item}</span>
           ${e.quantity !== null && e.quantity !== undefined ? `<span class="tree-item-qty">${e.quantity}${e.unit ? ' ' + e.unit : ''}</span>` : ''}
-          ${e.note ? `<div class="tree-item-note">備註：${e.note}</div>` : ''}
+          ${e.note ? `<div class="tree-item-note">${t('treeNotePrefix')}${e.note}</div>` : ''}
         </div>
       `).join('');
 
@@ -1456,7 +1761,7 @@ ${entrySchema}
             <span class="tree-caret">▸</span>
             <span class="tree-group-icon">${icon}</span>
             <span class="tree-group-title">${key}</span>
-            <span class="tree-group-count">${items.length} 項</span>
+            <span class="tree-group-count">${t('treeItemCount', { n: items.length })}</span>
           </div>
           <div class="tree-group-body">${itemRows}</div>
         </div>
@@ -1480,7 +1785,7 @@ ${entrySchema}
     const box = document.getElementById('jsonBox');
     const toggle = document.getElementById('jsonToggle');
     box.classList.toggle('show');
-    toggle.textContent = box.classList.contains('show') ? '▴ 隱藏原始 JSON 資料' : '▾ 顯示原始 JSON 資料';
+    toggle.textContent = box.classList.contains('show') ? t('jsonHide') : t('jsonShow');
   }
 
   // ===== 新增：匯入 JSON 功能 =====
@@ -1504,12 +1809,12 @@ ${entrySchema}
           entries = importedData;
           expandedGroups.clear();
           renderLog();
-          alert(`成功匯入 ${entries.length} 筆庫存紀錄！`);
+          alert(t('importSuccess', { n: entries.length }));
         } else {
-          throw new Error('JSON 格式必須為陣列物件 [ ... ]');
+          throw new Error(t('importBadFormat'));
         }
       } catch (err) {
-        alert('匯入失敗，請確保上傳的是正確的 HomeBase 備份 JSON 檔案。錯誤訊息: ' + err.message);
+        alert(t('importFail') + err.message);
       }
       // 清空 input 讓同一個檔案可以重複選取觸發
       event.target.value = '';
@@ -1528,7 +1833,7 @@ ${entrySchema}
   }
 
   function clearLog() {
-    if (confirm('確定要清空所有紀錄嗎？清空前請確保已匯出備份。')) {
+    if (confirm(t('clearLogConfirm'))) {
       entries = [];
       expandedGroups.clear();
       renderLog();
@@ -1543,13 +1848,13 @@ ${entrySchema}
     if (!query) return;
 
     if (entries.length === 0) {
-      resultBox.innerHTML = `<div class="search-not-found">目前還沒有任何庫存紀錄，請先新增物品。</div>`;
+      resultBox.innerHTML = `<div class="search-not-found">${t('searchNoData')}</div>`;
       resultBox.classList.add('show');
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = '搜尋中⋯';
+    btn.textContent = t('searching');
     resultBox.classList.remove('show');
 
     const prompt = `你是一個家庭庫存搜尋助手。以下是使用者家中的庫存資料（JSON 陣列），以及使用者的搜尋問題。
@@ -1572,22 +1877,24 @@ ${JSON.stringify(entries.map(e => ({
   ]
 }
 
-若完全找不到相關物品，found 設為 false，matches 設為空陣列。`;
+若完全找不到相關物品，found 設為 false，matches 設為空陣列。
+
+${t('promptLangLine')}`;
 
     try {
       const rawText = await callAI(prompt);
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('AI 回應格式異常');
+      if (!jsonMatch) throw new Error(t('errBadAiFormat'));
 
       const result = JSON.parse(jsonMatch[0]);
       renderSearchResult(result);
 
     } catch (err) {
-      resultBox.innerHTML = `<div class="search-not-found">搜尋失敗：${err.message}</div>`;
+      resultBox.innerHTML = `<div class="search-not-found">${t('searchFail')}${err.message}</div>`;
       resultBox.classList.add('show');
     } finally {
       btn.disabled = false;
-      btn.textContent = '搜尋';
+      btn.textContent = t('searchBtn');
     }
   }
 
@@ -1595,7 +1902,7 @@ ${JSON.stringify(entries.map(e => ({
     const resultBox = document.getElementById('searchResult');
 
     if (!result.found || !result.matches || result.matches.length === 0) {
-      resultBox.innerHTML = `<div class="search-not-found">🔍 ${result.answer || '找不到相關物品'}</div>`;
+      resultBox.innerHTML = `<div class="search-not-found">🔍 ${result.answer || t('searchNotFoundFallback')}</div>`;
       resultBox.classList.add('show');
       return;
     }
@@ -1617,9 +1924,9 @@ ${JSON.stringify(entries.map(e => ({
 
   // Init
   document.addEventListener('DOMContentLoaded', () => {
+    applyLang(detectLang());
     initRecognition();
     loadSettings();
-    renderHistory();
   });
 </script>
 </body>
