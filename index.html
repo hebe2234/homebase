@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HomeBase · 語音建檔測試</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a1a;
+    --soft: #f7f5f0;
+    --accent: #2d6a4f;
+    --accent-light: #e8f5ee;
+    --border: #e0ddd8;
+    --card: #ffffff;
+    --muted: #888;
+    --error: #c0392b;
+    --error-light: #fdf0ee;
+    --rec: #c0392b;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--soft);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 1.5rem 1rem 4rem;
+  }
+
+  .page { max-width: 680px; margin: 0 auto; }
+
+  .header { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.4rem; }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.6rem; letter-spacing: -0.02em; }
+  .badge {
+    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--ink); color: var(--soft); padding: 0.2rem 0.5rem; border-radius: 2px;
+  }
+  .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+  /* Language toggle */
+  .lang-row { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+  .lang-btn {
+    flex: 1; border: 1.5px solid var(--border); background: var(--card);
+    border-radius: 4px; padding: 0.6rem; cursor: pointer; font-size: 0.82rem;
+    font-weight: 500; font-family: inherit; transition: all 0.15s;
+  }
+  .lang-btn.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 600; }
+
+  /* Mic area */
+  .mic-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 2rem 1.5rem; text-align: center; margin-bottom: 1.25rem;
+  }
+
+  .mic-btn {
+    width: 84px; height: 84px; border-radius: 50%; border: none;
+    background: var(--ink); color: white; font-size: 1.8rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem; transition: all 0.2s; position: relative;
+  }
+
+  .mic-btn:hover { transform: scale(1.04); }
+  .mic-btn.recording { background: var(--rec); animation: pulse 1.4s infinite; }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(192,57,43,0.4); }
+    70% { box-shadow: 0 0 0 16px rgba(192,57,43,0); }
+    100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); }
+  }
+
+  .mic-status { font-size: 0.85rem; font-weight: 500; color: #444; margin-bottom: 0.3rem; }
+  .mic-hint { font-size: 0.75rem; color: var(--muted); }
+
+  /* Text input card */
+  .text-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 1.25rem; margin-bottom: 1.25rem;
+  }
+  .text-input {
+    width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 4px;
+    padding: 0.75rem 0.9rem; font-family: inherit; font-size: 0.9rem; line-height: 1.55;
+    resize: vertical; color: var(--ink); background: #fdfcfa;
+  }
+  .text-input:focus { outline: none; border-color: var(--accent); }
+  .text-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
+
+  /* Photo input card */
+  .photo-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 1.25rem; overflow: hidden;
+  }
+  .photo-upload-zone {
+    padding: 2.25rem 1.5rem; text-align: center; cursor: pointer; position: relative;
+    transition: background 0.15s;
+  }
+  .photo-upload-zone:hover { background: #fafaf8; }
+  .photo-upload-zone input {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .photo-upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .photo-upload-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; }
+  .photo-upload-hint { font-size: 0.78rem; color: var(--muted); line-height: 1.5; padding: 0 0.5rem; }
+
+  .photo-preview-wrap { position: relative; }
+  .photo-preview-wrap img {
+    width: 100%; max-height: 320px; object-fit: cover; display: block;
+  }
+  .photo-preview-clear {
+    position: absolute; top: 0.6rem; right: 0.6rem; background: rgba(0,0,0,0.55); color: #fff;
+    border: none; border-radius: 3px; padding: 0.35rem 0.7rem; font-size: 0.75rem;
+    cursor: pointer; font-family: inherit;
+  }
+
+
+  .waveform {
+    display: none; justify-content: center; align-items: center; gap: 3px;
+    height: 24px; margin-bottom: 0.75rem;
+  }
+  .waveform.show { display: flex; }
+  .wave-bar {
+    width: 3px; background: var(--rec); border-radius: 2px;
+    animation: wave 0.8s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+  .wave-bar:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { height: 22px; animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { height: 14px; animation-delay: 0.3s; }
+  .wave-bar:nth-child(5) { height: 10px; animation-delay: 0.4s; }
+
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+
+  /* Transcript */
+  .transcript-box {
+    display: none; background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1rem 1.1rem; margin-bottom: 1rem;
+  }
+  .transcript-box.show { display: block; }
+  .transcript-label {
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.5rem;
+  }
+  .transcript-text { font-size: 0.92rem; line-height: 1.6; color: #333; }
+  .transcript-text.interim { color: #aaa; }
+
+  /* Process button */
+  .process-btn {
+    width: 100%; background: var(--ink); color: var(--soft); border: none;
+    border-radius: 4px; padding: 0.85rem; font-size: 0.88rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; margin-bottom: 1.25rem; transition: opacity 0.15s;
+  }
+  .process-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .process-btn:not(:disabled):hover { opacity: 0.82; }
+
+  /* Loading */
+  .loading {
+    display: none; align-items: center; gap: 0.75rem; background: var(--card);
+    border: 1px solid var(--border); border-radius: 4px; padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--muted);
+  }
+  .loading.show { display: flex; }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-box {
+    display: none; background: var(--error-light); border: 1px solid #f0c0bb;
+    border-radius: 4px; padding: 0.9rem 1.1rem; font-size: 0.8rem; color: var(--error);
+    margin-bottom: 1rem; white-space: pre-wrap;
+  }
+  .error-box.show { display: block; }
+
+  /* Result entry card */
+  .entry-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1rem 1.1rem; margin-bottom: 0.6rem;
+  }
+  .entry-top { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+  .entry-loc {
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.85rem;
+    background: var(--accent-light); color: var(--accent); padding: 0.2rem 0.55rem; border-radius: 3px;
+  }
+  .entry-item { font-weight: 600; font-size: 0.92rem; flex: 1; }
+  .entry-qty { font-size: 0.78rem; font-weight: 600; background: #f0f0ec; padding: 0.15rem 0.5rem; border-radius: 2px; color: #555; }
+  .entry-note { font-size: 0.82rem; color: #666; padding-left: 0.1rem; }
+  .entry-note::before { content: '備註：'; color: var(--muted); }
+
+  /* Log section */
+  .log-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem;
+  }
+  .log-title { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+  .log-actions { display: flex; gap: 0.5rem; }
+  .log-btn {
+    font-size: 0.72rem; font-weight: 500; color: var(--muted); background: none;
+    border: 1px solid var(--border); border-radius: 3px; padding: 0.25rem 0.6rem;
+    cursor: pointer; font-family: inherit;
+  }
+  .log-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .empty-state {
+    text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 0.85rem;
+    background: var(--card); border: 1px dashed var(--border); border-radius: 4px;
+  }
+
+  /* JSON preview */
+  .json-toggle {
+    font-size: 0.75rem; color: var(--muted); cursor: pointer; text-align: center;
+    padding: 0.5rem; margin-top: 0.5rem;
+  }
+  .json-box {
+    display: none; background: #1e1e1e; color: #d4d4d4; border-radius: 4px;
+    padding: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    line-height: 1.6; overflow-x: auto; margin-top: 0.5rem; white-space: pre-wrap;
+  }
+  .json-box.show { display: block; }
+
+  .footer { margin-top: 2rem; font-size: 0.72rem; color: #bbb; text-align: center; line-height: 1.6; }
+
+  /* Review queue overlay */
+  .review-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(26,26,26,0.55);
+    z-index: 100; align-items: flex-end; justify-content: center;
+  }
+  .review-overlay.show { display: flex; }
+  @media (min-width: 600px) { .review-overlay { align-items: center; } }
+
+  .review-sheet {
+    background: var(--soft); width: 100%; max-width: 640px; max-height: 88vh;
+    border-radius: 12px 12px 0 0; overflow-y: auto; padding: 1.25rem 1.1rem 1.5rem;
+  }
+  @media (min-width: 600px) { .review-sheet { border-radius: 12px; max-height: 85vh; } }
+
+  .review-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem;
+  }
+  .review-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; }
+  .review-close { background: none; border: none; font-size: 1.1rem; color: var(--muted); cursor: pointer; padding: 0.2rem 0.4rem; }
+  .review-subtitle { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.1rem; }
+
+  .review-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.9rem 0.95rem; margin-bottom: 0.6rem;
+  }
+  .review-item-top { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .review-item-remove {
+    background: none; border: 1px solid var(--border); border-radius: 3px; color: var(--muted);
+    font-size: 0.7rem; padding: 0.2rem 0.5rem; cursor: pointer; font-family: inherit; flex-shrink: 0;
+    align-self: flex-start; margin-left: auto;
+  }
+  .review-item-remove:hover { border-color: var(--error); color: var(--error); }
+
+  .review-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .review-field { display: flex; flex-direction: column; gap: 0.25rem; }
+  .review-field.full { grid-column: 1 / -1; }
+  .review-field label {
+    font-size: 0.65rem; font-weight: 600; color: var(--muted); letter-spacing: 0.04em;
+  }
+  .review-field input, .review-field select {
+    border: 1.5px solid var(--border); border-radius: 4px; padding: 0.45rem 0.6rem;
+    font-family: inherit; font-size: 0.83rem; color: var(--ink); background: #fdfcfa;
+  }
+  .review-field input:focus, .review-field select:focus { outline: none; border-color: var(--accent); }
+  .review-qty-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+  .review-empty {
+    text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 0.85rem;
+  }
+
+  .review-actions { display: flex; gap: 0.6rem; margin-top: 0.5rem; position: sticky; bottom: 0; padding-top: 0.5rem; }
+  .review-confirm-btn {
+    flex: 1; background: var(--ink); color: var(--soft); border: none; border-radius: 4px;
+    padding: 0.85rem; font-size: 0.88rem; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  .review-confirm-btn:hover { opacity: 0.85; }
+  .review-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .review-cancel-btn {
+    background: none; border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem 1.1rem;
+    font-size: 0.85rem; color: var(--muted); cursor: pointer; font-family: inherit;
+  }
+  .review-cancel-btn:hover { border-color: var(--error); color: var(--error); }
+
+  /* History panel */
+  .history-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.8rem 1rem; margin-bottom: 1.25rem; cursor: pointer; user-select: none;
+  }
+  .history-toggle-left { display: flex; align-items: center; gap: 0.6rem; }
+  .history-count {
+    font-size: 0.72rem; font-weight: 600; background: var(--accent-light); color: var(--accent);
+    padding: 0.15rem 0.5rem; border-radius: 2px;
+  }
+  .history-panel { display: none; margin-bottom: 1.25rem; }
+  .history-panel.show { display: block; }
+
+  .history-entry {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.9rem 1rem; margin-bottom: 0.6rem;
+  }
+  .history-entry-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+  .history-entry-icon { font-size: 0.95rem; }
+  .history-entry-time { font-size: 0.78rem; font-weight: 600; flex: 1; }
+  .history-entry-count {
+    font-size: 0.7rem; color: var(--muted); background: #f0f0ec; padding: 0.12rem 0.45rem; border-radius: 2px;
+  }
+  .history-entry-items { font-size: 0.78rem; color: #666; line-height: 1.6; margin-bottom: 0.5rem; }
+  .history-entry-actions { display: flex; gap: 0.5rem; }
+  .history-undo-btn {
+    font-size: 0.72rem; font-weight: 500; color: var(--error); background: none;
+    border: 1px solid #f0c0bb; border-radius: 3px; padding: 0.25rem 0.6rem; cursor: pointer; font-family: inherit;
+  }
+  .history-undo-btn:hover { background: var(--error-light); }
+  .history-undo-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .history-empty {
+    text-align: center; padding: 1.5rem 1rem; color: var(--muted); font-size: 0.83rem;
+    background: var(--card); border: 1px dashed var(--border); border-radius: 4px;
+  }
+
+  /* Settings panel */
+  .settings-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.8rem 1rem; margin-bottom: 1.25rem; cursor: pointer; user-select: none;
+  }
+  .settings-toggle-left { display: flex; align-items: center; gap: 0.6rem; }
+  .settings-icon { font-size: 1rem; }
+  .settings-title { font-size: 0.85rem; font-weight: 600; }
+  .settings-status {
+    font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 2px;
+  }
+  .settings-status.ok { background: var(--accent-light); color: var(--accent); }
+  .settings-status.missing { background: #fdf0ee; color: var(--error); }
+  .settings-caret { font-size: 0.7rem; color: var(--muted); transition: transform 0.15s; }
+  .settings-caret.open { transform: rotate(180deg); }
+
+  .settings-panel {
+    display: none; background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 1.25rem; margin-top: -1rem; margin-bottom: 1.25rem;
+  }
+  .settings-panel.show { display: block; }
+
+  .provider-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem;
+  }
+  @media (max-width: 480px) { .provider-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .provider-btn {
+    border: 1.5px solid var(--border); background: #fdfcfa; border-radius: 4px;
+    padding: 0.6rem 0.4rem; cursor: pointer; text-align: center; font-family: inherit;
+    transition: all 0.15s;
+  }
+  .provider-btn.active { border-color: var(--accent); background: var(--accent-light); }
+  .provider-btn-name { font-size: 0.78rem; font-weight: 600; display: block; }
+  .provider-btn-cors { font-size: 0.6rem; color: var(--muted); display: block; margin-top: 0.15rem; }
+  .provider-btn.active .provider-btn-cors { color: #3a7a5a; }
+
+  .settings-field { margin-bottom: 0.9rem; }
+  .settings-label {
+    font-size: 0.72rem; font-weight: 600; color: #555; margin-bottom: 0.4rem; display: block;
+  }
+  .settings-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 4px;
+    padding: 0.6rem 0.8rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+    color: var(--ink); background: #fdfcfa;
+  }
+  .settings-input:focus { outline: none; border-color: var(--accent); }
+
+  .settings-note {
+    font-size: 0.75rem; line-height: 1.55; color: #666; background: #fafaf8;
+    border-left: 3px solid var(--border); padding: 0.7rem 0.9rem; border-radius: 0 4px 4px 0;
+    margin-bottom: 0.9rem;
+  }
+  .settings-note.warn { border-left-color: #d4923a; background: #fdf6ec; color: #8a5d1f; }
+  .settings-note a { color: var(--accent); }
+
+  .settings-save-row { display: flex; gap: 0.5rem; }
+  .settings-save-btn {
+    flex: 1; background: var(--ink); color: var(--soft); border: none; border-radius: 4px;
+    padding: 0.65rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .settings-save-btn:hover { opacity: 0.82; }
+  .settings-clear-btn {
+    background: none; border: 1px solid var(--border); border-radius: 4px;
+    padding: 0.65rem 1rem; font-size: 0.82rem; color: var(--muted); cursor: pointer; font-family: inherit;
+  }
+  .settings-clear-btn:hover { border-color: var(--error); color: var(--error); }
+
+  /* Search */
+  .search-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 1.1rem; margin-bottom: 1.5rem;
+  }
+  .search-row { display: flex; gap: 0.5rem; }
+  .search-input {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 4px;
+    padding: 0.65rem 0.85rem; font-family: inherit; font-size: 0.9rem; color: var(--ink);
+    background: #fdfcfa;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); }
+  .search-btn {
+    background: var(--ink); color: var(--soft); border: none; border-radius: 4px;
+    padding: 0 1.1rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: opacity 0.15s;
+  }
+  .search-btn:hover { opacity: 0.82; }
+  .search-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .search-result {
+    display: none; margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border);
+  }
+  .search-result.show { display: block; }
+  .search-result-found {
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .search-hit {
+    display: flex; align-items: center; gap: 0.6rem; background: var(--accent-light);
+    border-radius: 4px; padding: 0.7rem 0.9rem;
+  }
+  .search-hit-loc {
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.85rem;
+    background: var(--accent); color: white; padding: 0.2rem 0.55rem; border-radius: 3px;
+  }
+  .search-hit-item { font-weight: 600; font-size: 0.9rem; flex: 1; color: var(--ink); }
+  .search-hit-qty { font-size: 0.78rem; font-weight: 600; color: var(--accent); }
+  .search-not-found {
+    font-size: 0.85rem; color: var(--muted); padding: 0.5rem 0;
+  }
+  .search-answer {
+    font-size: 0.88rem; color: #333; line-height: 1.6; margin-bottom: 0.75rem;
+    padding: 0.7rem 0.9rem; background: #fafaf8; border-left: 3px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* View toggle for log */
+  .view-toggle { display: flex; gap: 0.4rem; }
+  .view-btn {
+    font-size: 0.72rem; font-weight: 500; color: var(--muted); background: none;
+    border: 1px solid var(--border); border-radius: 3px; padding: 0.25rem 0.6rem;
+    cursor: pointer; font-family: inherit;
+  }
+  .view-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); font-weight: 600; }
+
+  /* Tree view */
+  .tree-group {
+    background: var(--card); border: 1px solid var(--border); border-radius: 4px;
+    margin-bottom: 0.5rem; overflow: hidden;
+  }
+  .tree-group-header {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1rem;
+    cursor: pointer; user-select: none; transition: background 0.1s;
+  }
+  .tree-group-header:hover { background: #fafaf8; }
+  .tree-caret {
+    font-size: 0.7rem; color: var(--muted); transition: transform 0.15s; width: 0.8rem;
+  }
+  .tree-group.expanded .tree-caret { transform: rotate(90deg); }
+  .tree-group-icon { font-size: 1rem; }
+  .tree-group-title { font-weight: 600; font-size: 0.88rem; flex: 1; }
+  .tree-group-count {
+    font-size: 0.72rem; font-weight: 600; background: #f0f0ec; color: #666;
+    padding: 0.12rem 0.5rem; border-radius: 2px;
+  }
+  .tree-group-body {
+    display: none; padding: 0 1rem 0.85rem 2.4rem; border-top: 1px solid var(--border);
+  }
+  .tree-group.expanded .tree-group-body { display: block; padding-top: 0.7rem; }
+
+  .tree-item-row {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0;
+    font-size: 0.85rem; border-bottom: 1px solid #f0efea;
+  }
+  .tree-item-row:last-child { border-bottom: none; }
+  .tree-item-loc {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 600;
+    color: var(--accent); background: var(--accent-light); padding: 0.1rem 0.4rem; border-radius: 2px;
+  }
+  .tree-item-name { flex: 1; font-weight: 500; }
+  .tree-item-qty { font-size: 0.75rem; color: #666; font-weight: 600; }
+  .tree-item-note { font-size: 0.72rem; color: var(--muted); width: 100%; padding-left: 0; margin-top: 0.1rem; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <span class="logo">HomeBase</span>
+    <span class="badge">語音建檔測試</span>
+  </div>
+  <div class="subtitle">說出物品位置、名稱、數量，AI 自動整理成結構化庫存資料</div>
+
+  <div class="settings-toggle" onclick="toggleSettings()">
+    <div class="settings-toggle-left">
+      <span class="settings-icon">⚙️</span>
+      <span class="settings-title">AI 設定</span>
+      <span class="settings-status missing" id="settingsStatus">未設定</span>
+    </div>
+    <span class="settings-caret" id="settingsCaret">▾</span>
+  </div>
+
+  <div class="settings-panel" id="settingsPanel">
+    <div class="provider-grid">
+      <button class="provider-btn" id="provider-claude" onclick="selectProvider('claude')">
+        <span class="provider-btn-name">Claude</span>
+        <span class="provider-btn-cors">需要代理</span>
+      </button>
+      <button class="provider-btn" id="provider-gemini" onclick="selectProvider('gemini')">
+        <span class="provider-btn-name">Gemini</span>
+        <span class="provider-btn-cors">✓ 可直連</span>
+      </button>
+      <button class="provider-btn" id="provider-deepseek" onclick="selectProvider('deepseek')">
+        <span class="provider-btn-name">DeepSeek</span>
+        <span class="provider-btn-cors">需要代理</span>
+      </button>
+      <button class="provider-btn" id="provider-grok" onclick="selectProvider('grok')">
+        <span class="provider-btn-name">Grok</span>
+        <span class="provider-btn-cors">需要代理</span>
+      </button>
+    </div>
+
+    <div class="settings-note" id="corsNote"></div>
+
+    <div class="settings-field">
+      <label class="settings-label">模型</label>
+      <select class="settings-input" id="modelSelect" onchange="onModelChange()" style="font-family:'Inter',sans-serif; cursor:pointer;"></select>
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label">API Key</label>
+      <input type="password" class="settings-input" id="apiKeyInput" placeholder="貼上你的 API Key">
+    </div>
+
+    <div class="settings-field" id="proxyField" style="display:none">
+      <label class="settings-label">代理伺服器網址（需要代理的供應商）</label>
+      <input type="text" class="settings-input" id="proxyInput" placeholder="例如：http://localhost:3000/api/chat">
+    </div>
+
+    <div class="settings-note">
+      API Key 僅儲存在你瀏覽器的 localStorage，不會上傳到任何伺服器。重新整理頁面不會消失，但換瀏覽器或清除快取會消失。
+    </div>
+
+    <div class="settings-save-row">
+      <button class="settings-save-btn" onclick="saveSettings()">儲存設定</button>
+      <button class="settings-clear-btn" onclick="clearSettings()">清除</button>
+    </div>
+  </div>
+
+  <div class="lang-row">
+    <button class="lang-btn active" id="langZh" onclick="setLang('zh-TW')">中文</button>
+    <button class="lang-btn" id="langEn" onclick="setLang('en-US')">English</button>
+  </div>
+
+  <div class="lang-row" style="display:grid; grid-template-columns: repeat(3, 1fr);">
+    <button class="lang-btn active" id="inputVoice" onclick="setInputMode('voice')">🎙️ 語音輸入</button>
+    <button class="lang-btn" id="inputText" onclick="setInputMode('text')">⌨️ 文字輸入</button>
+    <button class="lang-btn" id="inputPhoto" onclick="setInputMode('photo')">📷 拍照輸入</button>
+  </div>
+
+  <div class="search-card">
+    <div class="search-row">
+      <input type="text" class="search-input" id="searchInput" placeholder="找東西，例如：眼鏡在哪裡？" onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="search-btn" id="searchBtn" onclick="doSearch()">搜尋</button>
+    </div>
+    <div class="search-result" id="searchResult"></div>
+  </div>
+
+  <div class="mic-card" id="micCard">
+    <div class="waveform" id="waveform">
+      <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      <div class="wave-bar"></div><div class="wave-bar"></div>
+    </div>
+    <button class="mic-btn" id="micBtn" onclick="toggleRecording()">🎙️</button>
+    <div class="mic-status" id="micStatus">點擊開始錄音</div>
+    <div class="mic-hint" id="micHint">例：「A1 廚房上層抽屜，電池三顆，快用完了」</div>
+  </div>
+
+  <div class="text-card" id="textCard" style="display:none">
+    <textarea class="text-input" id="textInput" placeholder="輸入物品位置、名稱、數量、備註，例如：A1 廚房上層抽屜，電池三顆，快用完了，還有剪刀一個" oninput="handleTextInput()"></textarea>
+    <div class="text-hint" id="textHintLabel">可一次輸入多筆，AI 會自動拆解每個物品</div>
+  </div>
+
+  <div class="photo-card" id="photoCard" style="display:none">
+    <div class="photo-upload-zone" id="photoUploadZone">
+      <input type="file" accept="image/*" capture="environment" id="photoInput" onchange="handlePhotoSelect(event)">
+      <div class="photo-upload-icon">📷</div>
+      <div class="photo-upload-title" id="photoUploadTitle">拍照或選擇相簿照片</div>
+      <div class="photo-upload-hint" id="photoUploadHint">拍下櫃子、抽屜內部，AI 會自動辨識物品並建檔</div>
+    </div>
+    <div class="photo-preview-wrap" id="photoPreviewWrap" style="display:none">
+      <img id="photoPreviewImg" src="" alt="預覽">
+      <button class="photo-preview-clear" onclick="clearPhoto()">✕ 重新選擇</button>
+    </div>
+  </div>
+
+  <div class="transcript-box" id="transcriptBox">
+    <div class="transcript-label">語音辨識結果</div>
+    <div class="transcript-text" id="transcriptText"></div>
+  </div>
+
+  <button class="process-btn" id="processBtn" disabled onclick="processTranscript()">AI 解析並建檔</button>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span>AI 正在解析語意⋯⋯</span>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- History -->
+  <div class="history-toggle" onclick="toggleHistory()">
+    <div class="history-toggle-left">
+      <span class="settings-icon">🕓</span>
+      <span class="settings-title">歷史紀錄</span>
+      <span class="history-count" id="historyCount">0 筆</span>
+    </div>
+    <span class="settings-caret" id="historyCaret">▾</span>
+  </div>
+  <div class="history-panel" id="historyPanel">
+    <div id="historyContainer">
+      <div class="history-empty" id="historyEmpty">還沒有任何輸入紀錄</div>
+    </div>
+  </div>
+
+  <div class="log-header">
+    <span class="log-title">庫存紀錄</span>
+    <div class="log-actions">
+      <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJsonImport(event)">
+      <button class="log-btn" onclick="uploadJson()">⬆ 匯入 JSON</button>
+      <button class="log-btn" onclick="downloadJson()">⬇ 匯出 JSON</button>
+      <button class="log-btn" onclick="clearLog()">清空</button>
+    </div>
+  </div>
+  <div class="log-header" style="margin-top:-0.5rem">
+    <div class="view-toggle">
+      <button class="view-btn active" id="viewByCategory" onclick="setViewMode('category')">依物品分類</button>
+      <button class="view-btn" id="viewByLocation" onclick="setViewMode('location')">依櫃子分類</button>
+    </div>
+    <span></span>
+  </div>
+  <div id="logContainer">
+    <div class="empty-state" id="emptyState">還沒有任何紀錄，開始輸入或匯入檔案試試看</div>
+  </div>
+
+  <div class="json-toggle" id="jsonToggle" onclick="toggleJsonView()" style="display:none">▾ 顯示原始 JSON 資料</div>
+  <div class="json-box" id="jsonBox"></div>
+
+  <div class="footer">
+    語音與資料皆在瀏覽器本地處理，重新整理頁面將清除紀錄（建議透過匯出 JSON 備份）。<br>
+    本工具使用瀏覽器原生語音辨識 + Claude AI 語意解析，僅供技術驗證用途。
+  </div>
+
+</div>
+
+<!-- Review Queue Modal -->
+<div class="review-overlay" id="reviewOverlay">
+  <div class="review-sheet">
+    <div class="review-header">
+      <span class="review-title">確認辨識結果</span>
+      <button class="review-close" onclick="closeReviewQueue()">✕</button>
+    </div>
+    <div class="review-subtitle" id="reviewSubtitle">請確認或修改以下內容，再加入庫存</div>
+    <div id="reviewContainer"></div>
+    <div class="review-actions">
+      <button class="review-cancel-btn" onclick="closeReviewQueue()">取消</button>
+      <button class="review-confirm-btn" id="reviewConfirmBtn" onclick="confirmReviewQueue()">確認加入庫存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== AI Provider Configuration =====
+  const PROVIDERS = {
+    claude: {
+      label: 'Claude',
+      directCall: false,
+      defaultEndpoint: 'https://api.anthropic.com/v1/messages',
+      corsNote: 'Anthropic API 不允許瀏覽器直接呼叫（CORS 限制）。你需要一個小型代理伺服器轉發請求。下方「代理伺服器網址」請填你自己架設的代理位址，例如本地跑的 Node.js 轉發伺服器。',
+      models: [
+        { id: 'claude-sonnet-4-6', label: 'Sonnet 4.6（推薦，平衡）' },
+        { id: 'claude-opus-4-7', label: 'Opus 4.7（最強，較貴）' },
+        { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5（最快最便宜）' }
+      ]
+    },
+    gemini: {
+      label: 'Gemini',
+      directCall: true,
+      defaultEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/MODEL_ID:generateContent',
+      corsNote: 'Google Gemini API 目前允許瀏覽器直接呼叫，不需要代理伺服器。在 https://aistudio.google.com/apikey 申請免費 API Key。每個模型有各自獨立的免費額度，一個用完可以切換下一個。',
+      models: [
+        { id: 'gemini-2.5-flash', label: '2.5 Flash（推薦，額度較高）' },
+        { id: 'gemini-2.5-flash-lite', label: '2.5 Flash-Lite（額度最高，較簡單任務）' },
+        { id: 'gemini-2.5-pro', label: '2.5 Pro（較強，額度較低）' },
+        { id: 'gemini-2.0-flash', label: '2.0 Flash（舊版備用）' }
+      ]
+    },
+    deepseek: {
+      label: 'DeepSeek',
+      directCall: false,
+      defaultEndpoint: 'https://api.deepseek.com/chat/completions',
+      corsNote: 'DeepSeek API 不允許瀏覽器直接呼叫（CORS 限制）。你需要一個小型代理伺服器轉發請求到 https://api.deepseek.com/chat/completions。',
+      models: [
+        { id: 'deepseek-chat', label: 'DeepSeek Chat（推薦）' },
+        { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner（較慢，推理較強）' }
+      ]
+    },
+    grok: {
+      label: 'Grok',
+      directCall: false,
+      defaultEndpoint: 'https://api.x.ai/v1/chat/completions',
+      corsNote: 'xAI Grok API 不允許瀏覽器直接呼叫（CORS 限制）。你需要一個小型代理伺服器轉發請求到 https://api.x.ai/v1/chat/completions。',
+      models: [
+        { id: 'grok-2-latest', label: 'Grok 2（推薦）' },
+        { id: 'grok-2-vision-latest', label: 'Grok 2 Vision（含圖片辨識）' }
+      ]
+    }
+  };
+
+  let aiConfig = {
+    provider: 'gemini',
+    model: 'gemini-2.5-flash',
+    apiKey: '',
+    proxyUrl: ''
+  };
+
+  function loadSettings() {
+    try {
+      const saved = localStorage.getItem('homebase_ai_config');
+      if (saved) aiConfig = { ...aiConfig, ...JSON.parse(saved) };
+    } catch (e) { /* ignore */ }
+    selectProvider(aiConfig.provider, true);
+    document.getElementById('apiKeyInput').value = aiConfig.apiKey || '';
+    document.getElementById('proxyInput').value = aiConfig.proxyUrl || '';
+    updateSettingsStatus();
+  }
+
+  function selectProvider(key, skipFieldFill) {
+    aiConfig.provider = key;
+    Object.keys(PROVIDERS).forEach(k => {
+      document.getElementById('provider-' + k).classList.toggle('active', k === key);
+    });
+    const p = PROVIDERS[key];
+    document.getElementById('corsNote').textContent = p.corsNote;
+    document.getElementById('corsNote').className = 'settings-note' + (p.directCall ? '' : ' warn');
+    document.getElementById('proxyField').style.display = p.directCall ? 'none' : 'block';
+
+    // Populate model dropdown for this provider
+    const modelSelect = document.getElementById('modelSelect');
+    modelSelect.innerHTML = p.models.map(m => `<option value="${m.id}">${m.label}</option>`).join('');
+
+    // Preserve chosen model if switching back to same provider, else default to first model
+    const stillValid = p.models.some(m => m.id === aiConfig.model);
+    if (!skipFieldFill || !stillValid) {
+      aiConfig.model = p.models[0].id;
+    }
+    modelSelect.value = aiConfig.model;
+
+    if (!skipFieldFill && !document.getElementById('proxyInput').value) {
+      document.getElementById('proxyInput').value = '';
+    }
+  }
+
+  function onModelChange() {
+    aiConfig.model = document.getElementById('modelSelect').value;
+  }
+
+  function toggleSettings() {
+    const panel = document.getElementById('settingsPanel');
+    const caret = document.getElementById('settingsCaret');
+    panel.classList.toggle('show');
+    caret.classList.toggle('open');
+  }
+
+  function saveSettings() {
+    aiConfig.apiKey = document.getElementById('apiKeyInput').value.trim();
+    aiConfig.proxyUrl = document.getElementById('proxyInput').value.trim();
+    aiConfig.model = document.getElementById('modelSelect').value;
+    localStorage.setItem('homebase_ai_config', JSON.stringify(aiConfig));
+    updateSettingsStatus();
+    toggleSettings();
+  }
+
+  function clearSettings() {
+    aiConfig = { provider: aiConfig.provider, model: PROVIDERS[aiConfig.provider].models[0].id, apiKey: '', proxyUrl: '' };
+    localStorage.removeItem('homebase_ai_config');
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('proxyInput').value = '';
+    document.getElementById('modelSelect').value = aiConfig.model;
+    updateSettingsStatus();
+  }
+
+  function updateSettingsStatus() {
+    const statusEl = document.getElementById('settingsStatus');
+    const ready = !!aiConfig.apiKey && (PROVIDERS[aiConfig.provider].directCall || !!aiConfig.proxyUrl);
+    const modelLabel = PROVIDERS[aiConfig.provider].models.find(m => m.id === aiConfig.model)?.label.split('（')[0] || aiConfig.model;
+    statusEl.textContent = ready ? `已設定 · ${PROVIDERS[aiConfig.provider].label} ${modelLabel}` : '未設定';
+    statusEl.className = 'settings-status ' + (ready ? 'ok' : 'missing');
+  }
+
+  // Unified AI call — routes to the right provider format and handles direct vs proxy calls
+  async function callAI(promptText, imageBase64, imageMime) {
+    const p = PROVIDERS[aiConfig.provider];
+    if (!aiConfig.apiKey) throw new Error('請先在「AI 設定」中填入 API Key');
+    if (!p.directCall && !aiConfig.proxyUrl) throw new Error(`${p.label} 需要代理伺服器網址，請先在「AI 設定」中填入`);
+
+    if (aiConfig.provider === 'gemini') {
+      return callGeminiDirect(promptText, imageBase64, imageMime);
+    } else {
+      return callViaProxy(promptText, imageBase64, imageMime);
+    }
+  }
+
+  async function callGeminiDirect(promptText, imageBase64, imageMime) {
+    const parts = [{ text: promptText }];
+    if (imageBase64) {
+      parts.unshift({ inline_data: { mime_type: imageMime || 'image/jpeg', data: imageBase64 } });
+    }
+    const endpoint = PROVIDERS.gemini.defaultEndpoint.replace('MODEL_ID', aiConfig.model);
+    const url = `${endpoint}?key=${encodeURIComponent(aiConfig.apiKey)}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }] })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const msg = data.error?.message || `Gemini API 錯誤 ${response.status}`;
+      const isQuota = response.status === 429 || /quota/i.test(msg);
+      throw new Error(isQuota
+        ? `額度已用完（${aiConfig.model}）。請到「AI 設定」切換其他 Gemini 模型再試一次，或稍候再用同一個模型。錯誤詳情：${msg}`
+        : msg);
+    }
+    const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+    if (!text) throw new Error('Gemini 回應為空：' + JSON.stringify(data));
+    return text;
+  }
+
+  // For providers that need a proxy: sends a normalized payload, expects { text: "..." } back.
+  // Your proxy server should translate this into the target provider's actual API format.
+  async function callViaProxy(promptText, imageBase64, imageMime) {
+    const response = await fetch(aiConfig.proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: aiConfig.provider,
+        model: aiConfig.model,
+        apiKey: aiConfig.apiKey,
+        prompt: promptText,
+        image: imageBase64 ? { mime_type: imageMime || 'image/jpeg', data: imageBase64 } : null
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `代理伺服器錯誤 ${response.status}`);
+    if (!data.text) throw new Error('代理伺服器回應格式異常，預期 { text: "..." }，收到：' + JSON.stringify(data));
+    return data.text;
+  }
+
+  let currentLang = 'zh-TW';
+  let currentInputMode = 'voice';
+  let recognition = null;
+  let isRecording = false;
+  let finalTranscript = '';
+  let entries = [];
+  let historyLog = []; // [{ id, timestamp, source, sourceLabel, itemIds: [entryIndexAtTimeOfInsert...], items: [...] }]
+  let reviewQueue = []; // working copy of entries currently being confirmed
+  let reviewMeta = { sourceLabel: '', source: '' };
+  let photoBase64 = null;
+  let photoMime = 'image/jpeg';
+  let inputStartedAt = null; // timestamp when user began this input (first keystroke / recording start / photo taken)
+
+  function setInputMode(mode) {
+    currentInputMode = mode;
+    document.getElementById('inputVoice').classList.toggle('active', mode === 'voice');
+    document.getElementById('inputText').classList.toggle('active', mode === 'text');
+    document.getElementById('inputPhoto').classList.toggle('active', mode === 'photo');
+    document.getElementById('micCard').style.display = mode === 'voice' ? 'block' : 'none';
+    document.getElementById('textCard').style.display = mode === 'text' ? 'block' : 'none';
+    document.getElementById('photoCard').style.display = mode === 'photo' ? 'block' : 'none';
+    document.getElementById('transcriptBox').classList.remove('show');
+
+    const btn = document.getElementById('processBtn');
+    if (mode === 'voice') {
+      if (isRecording) stopRecording();
+      btn.disabled = finalTranscript.trim().length === 0;
+      btn.textContent = 'AI 解析並建檔';
+    } else if (mode === 'text') {
+      btn.disabled = document.getElementById('textInput').value.trim().length === 0;
+      btn.textContent = 'AI 解析並建檔';
+    } else {
+      btn.disabled = !photoBase64;
+      btn.textContent = 'AI 辨識照片並建檔';
+    }
+  }
+
+  function handleTextInput() {
+    const val = document.getElementById('textInput').value.trim();
+    if (val.length > 0 && !inputStartedAt) inputStartedAt = new Date().toISOString();
+    if (val.length === 0) inputStartedAt = null;
+    document.getElementById('processBtn').disabled = val.length === 0;
+  }
+
+  function handlePhotoSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    inputStartedAt = new Date().toISOString();
+    loadPhoto(file);
+  }
+
+  function loadPhoto(file) {
+    // Convert to JPEG via canvas — normalizes HEIC/PNG/WebP and compresses large images
+    photoMime = 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 1280;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        photoBase64 = dataUrl.split(',')[1];
+
+        document.getElementById('photoPreviewImg').src = dataUrl;
+        document.getElementById('photoPreviewWrap').style.display = 'block';
+        document.getElementById('photoUploadZone').style.display = 'none';
+        document.getElementById('processBtn').disabled = false;
+        document.getElementById('errorBox').classList.remove('show');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearPhoto() {
+    photoBase64 = null;
+    document.getElementById('photoPreviewWrap').style.display = 'none';
+    document.getElementById('photoUploadZone').style.display = 'block';
+    document.getElementById('photoInput').value = '';
+    document.getElementById('processBtn').disabled = true;
+  }
+
+  const hints = {
+    'zh-TW': '例：「A1 廚房上層抽屜，電池三顆，快用完了」',
+    'en-US': 'e.g. "A1 kitchen top drawer, three batteries, running low"'
+  };
+  const textPlaceholders = {
+    'zh-TW': '輸入物品位置、名稱、數量、備註，例如：A1 廚房上層抽屜，電池三顆，快用完了，還有剪刀一個',
+    'en-US': 'Enter location, item, quantity, notes — e.g. "A1 kitchen top drawer, three batteries, running low, also one pair of scissors"'
+  };
+  const textHints = {
+    'zh-TW': '可一次輸入多筆，AI 會自動拆解每個物品',
+    'en-US': 'You can enter multiple items at once — AI will split them automatically'
+  };
+  const statusIdle = { 'zh-TW': '點擊開始錄音', 'en-US': 'Tap to start recording' };
+  const statusRec = { 'zh-TW': '正在聆聽⋯⋯點擊停止', 'en-US': 'Listening... tap to stop' };
+
+  const searchPlaceholders = {
+    'zh-TW': '找東西，例如：眼鏡在哪裡？',
+    'en-US': 'Find something, e.g. "Where are my glasses?"'
+  };
+  const photoTitles = {
+    'zh-TW': '拍照或選擇相簿照片',
+    'en-US': 'Take a photo or choose from library'
+  };
+  const photoHints = {
+    'zh-TW': '拍下櫃子、抽屜內部，AI 會自動辨識物品並建檔',
+    'en-US': 'Photograph inside a drawer or cabinet — AI will identify items automatically'
+  };
+
+  function setLang(lang) {
+    currentLang = lang;
+    document.getElementById('langZh').classList.toggle('active', lang === 'zh-TW');
+    document.getElementById('langEn').classList.toggle('active', lang === 'en-US');
+    document.getElementById('micHint').textContent = hints[lang];
+    document.getElementById('micStatus').textContent = isRecording ? statusRec[lang] : statusIdle[lang];
+    document.getElementById('textInput').placeholder = textPlaceholders[lang];
+    document.getElementById('textHintLabel').textContent = textHints[lang];
+    document.getElementById('searchInput').placeholder = searchPlaceholders[lang];
+    document.getElementById('photoUploadTitle').textContent = photoTitles[lang];
+    document.getElementById('photoUploadHint').textContent = photoHints[lang];
+  }
+
+  function initRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showError('您的瀏覽器不支援語音辨識，請使用 Chrome 或 Safari（建議手機版 Chrome / 桌面版 Chrome 或 Edge）。');
+      document.getElementById('micBtn').disabled = true;
+      return null;
+    }
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = currentLang;
+
+    rec.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interim += transcript;
+        }
+      }
+      const box = document.getElementById('transcriptBox');
+      const text = document.getElementById('transcriptText');
+      box.classList.add('show');
+      text.innerHTML = finalTranscript + (interim ? `<span class="interim">${interim}</span>` : '');
+      document.getElementById('processBtn').disabled = finalTranscript.trim().length === 0;
+    };
+
+    rec.onerror = (event) => {
+      if (event.error === 'no-speech') return;
+      showError('語音辨識錯誤：' + event.error);
+      stopRecording();
+    };
+
+    rec.onend = () => {
+      if (isRecording) rec.start(); // auto-restart for continuous listening
+    };
+
+    return rec;
+  }
+
+  function toggleRecording() {
+    if (!isRecording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  }
+
+  function startRecording() {
+    recognition = initRecognition();
+    if (!recognition) return;
+    recognition.lang = currentLang;
+    finalTranscript = '';
+    inputStartedAt = new Date().toISOString();
+    isRecording = true;
+    recognition.start();
+    document.getElementById('micBtn').classList.add('recording');
+    document.getElementById('micBtn').textContent = '⏹';
+    document.getElementById('micStatus').textContent = statusRec[currentLang];
+    document.getElementById('waveform').classList.add('show');
+    document.getElementById('errorBox').classList.remove('show');
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    if (recognition) recognition.stop();
+    document.getElementById('micBtn').classList.remove('recording');
+    document.getElementById('micBtn').textContent = '🎙️';
+    document.getElementById('micStatus').textContent = statusIdle[currentLang];
+    document.getElementById('waveform').classList.remove('show');
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.textContent = msg;
+    box.classList.add('show');
+  }
+
+  async function processTranscript() {
+    const isPhotoMode = currentInputMode === 'photo';
+    const text = currentInputMode === 'text'
+      ? document.getElementById('textInput').value.trim()
+      : finalTranscript.trim();
+
+    if (isPhotoMode) {
+      if (!photoBase64) return;
+    } else if (!text) {
+      return;
+    }
+
+    const btn = document.getElementById('processBtn');
+    const loading = document.getElementById('loading');
+    const loadingLabel = document.querySelector('#loading span');
+    btn.disabled = true;
+    loading.classList.add('show');
+    if (loadingLabel) loadingLabel.textContent = isPhotoMode ? 'AI 正在辨識照片中的物品⋯⋯' : 'AI 正在解析語意⋯⋯';
+    document.getElementById('errorBox').classList.remove('show');
+
+    // Capture timing before reset
+    const submittedAt = new Date().toISOString();
+    const startedAt = inputStartedAt || submittedAt;
+
+    const entrySchema = `{
+  "entries": [
+    {
+      "location_id": "位置代號，例如 A1，若使用者沒說則留空字串",
+      "location_label": "位置的口語描述，例如「廚房上層抽屜」，若沒提到則留空字串",
+      "item": "物品名稱",
+      "category": "物品種類，從以下選擇最貼切的一個：文具、電子用品、清潔用品、廚房用品、衛浴用品、食品、衣物、工具、配件、文件、玩具、其他",
+      "quantity": 數字，若無法判斷確切數量則填 null,
+      "unit": "單位，例如顆、個、瓶、包，若不明顯則留空字串",
+      "note": "備註，例如「快用完了」、「壞掉了」，若沒有則留空字串",
+      "placed_at_raw": "使用者口語中提到關於『這個物品是何時放入/購買/取得』的原始描述，例如「上禮拜買的」「今天放的」「上個月」，若完全沒提到則留空字串"
+    }
+  ]
+}`;
+
+    const prompt = isPhotoMode
+      ? `你是一個家庭庫存視覺辨識 AI。使用者拍了一張櫃子、抽屜或收納空間的照片，請仔細辨識照片中所有清晰可見的物品。
+
+使用者語言：${currentLang === 'zh-TW' ? '中文' : '英文'}
+
+請以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記，所有文字內容請用${currentLang === 'zh-TW' ? '繁體中文' : '英文'}）：
+
+${entrySchema}
+
+規則：
+- location_id 留空字串（照片無法判斷位置代號，由使用者後續自行填寫或編輯）
+- location_label 可以根據照片內容簡短描述這是什麼空間或容器（例如「抽屜」、「層架」），若無法判斷則留空字串
+- 數量請盡量從照片中數出實際看到的個數，無法確定時才填 null
+- 只列出有把握辨識出的物品，模糊不清的不要硬猜
+- placed_at_raw 留空字串（照片無法判斷實際放入時間，除非包裝上清楚印有日期，可填入該日期文字）
+- 如果照片中完全沒有可辨識的物品，回傳 {"entries": []}`
+      : `你是一個家庭庫存語音解析 AI。使用者用口語描述他們整理家中物品的內容，可能包含位置代號、物品名稱、數量、備註。
+
+使用者語言：${currentLang === 'zh-TW' ? '中文' : '英文'}
+原始語音轉文字內容：「${text}」
+
+請解析出其中提到的所有物品條目，以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記）：
+
+${entrySchema}
+
+一句話可能包含多個物品，請全部拆解出來。請特別注意使用者是否提到「放入」「買的」「取得」相關的時間描述（例如「上禮拜」「今天」「上個月」「剛買的」），並填入 placed_at_raw 欄位，原樣保留使用者的口語描述即可，不需要換算成日期。如果語音內容完全沒有提到任何物品或位置資訊，回傳 {"entries": []}。`;
+
+    try {
+      const rawText = isPhotoMode
+        ? await callAI(prompt, photoBase64, photoMime)
+        : await callAI(prompt);
+
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI 未回傳有效 JSON：' + rawText);
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      const newEntries = parsed.entries || [];
+
+      if (newEntries.length === 0) {
+        showError(isPhotoMode
+          ? 'AI 未能從照片中辨識出明確的物品，請換個角度或更近距離拍攝後再試一次。'
+          : 'AI 未能從內容中解析出物品，請換個方式描述後再試一次。');
+        return;
+      }
+
+      openReviewQueue(
+        newEntries,
+        isPhotoMode ? '（來自照片辨識）' : text,
+        isPhotoMode ? 'photo' : currentInputMode,
+        { startedAt, submittedAt }
+      );
+
+      // Reset input for next entry
+      finalTranscript = '';
+      inputStartedAt = null;
+      document.getElementById('transcriptBox').classList.remove('show');
+      document.getElementById('transcriptText').innerHTML = '';
+      document.getElementById('textInput').value = '';
+      if (isPhotoMode) clearPhoto();
+      document.getElementById('processBtn').disabled = true;
+
+    } catch (err) {
+      showError('解析失敗：' + err.message);
+    } finally {
+      loading.classList.remove('show');
+      btn.disabled = false;
+      if (isPhotoMode) clearPhoto();
+      document.getElementById('processBtn').disabled = true;
+    }
+  }
+
+  // ===== Review Queue (confirm before adding to inventory) =====
+  const categoryOptions = ['文具', '電子用品', '清潔用品', '廚房用品', '衛浴用品', '食品', '衣物', '工具', '配件', '文件', '玩具', '其他'];
+
+  function openReviewQueue(newEntries, sourceLabel, source, timing) {
+    reviewQueue = newEntries.map(e => ({
+      location_id: e.location_id || '',
+      location_label: e.location_label || '',
+      item: e.item || '',
+      category: categoryOptions.includes(e.category) ? e.category : '其他',
+      quantity: (e.quantity === null || e.quantity === undefined) ? '' : e.quantity,
+      unit: e.unit || '',
+      note: e.note || '',
+      placed_at_raw: e.placed_at_raw || ''
+    }));
+    reviewMeta = { sourceLabel, source, timing: timing || {} };
+    document.getElementById('reviewSubtitle').textContent =
+      `共辨識出 ${reviewQueue.length} 項物品，請確認或修改後加入庫存`;
+    renderReviewQueue();
+    document.getElementById('reviewOverlay').classList.add('show');
+  }
+
+  function closeReviewQueue() {
+    document.getElementById('reviewOverlay').classList.remove('show');
+    reviewQueue = [];
+  }
+
+  function renderReviewQueue() {
+    const container = document.getElementById('reviewContainer');
+    const confirmBtn = document.getElementById('reviewConfirmBtn');
+
+    if (reviewQueue.length === 0) {
+      container.innerHTML = `<div class="review-empty">沒有項目了，按「取消」關閉視窗</div>`;
+      confirmBtn.disabled = true;
+      return;
+    }
+    confirmBtn.disabled = false;
+
+    container.innerHTML = reviewQueue.map((e, i) => `
+      <div class="review-item">
+        <div class="review-item-top">
+          <button class="review-item-remove" onclick="removeReviewItem(${i})">✕ 移除</button>
+        </div>
+        <div class="review-field-row">
+          <div class="review-field">
+            <label>位置代號</label>
+            <input type="text" value="${escapeAttr(e.location_id)}" placeholder="例如 A1" oninput="updateReviewField(${i}, 'location_id', this.value)">
+          </div>
+          <div class="review-field">
+            <label>位置描述</label>
+            <input type="text" value="${escapeAttr(e.location_label)}" placeholder="例如 廚房抽屜" oninput="updateReviewField(${i}, 'location_label', this.value)">
+          </div>
+        </div>
+        <div class="review-field-row">
+          <div class="review-field full">
+            <label>物品名稱</label>
+            <input type="text" value="${escapeAttr(e.item)}" oninput="updateReviewField(${i}, 'item', this.value)">
+          </div>
+        </div>
+        <div class="review-field-row">
+          <div class="review-field">
+            <label>類別</label>
+            <select onchange="updateReviewField(${i}, 'category', this.value)">
+              ${categoryOptions.map(c => `<option value="${c}" ${c === e.category ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="review-field">
+            <label>數量／單位</label>
+            <div class="review-qty-row">
+              <input type="number" value="${escapeAttr(e.quantity)}" placeholder="數量" oninput="updateReviewField(${i}, 'quantity', this.value)">
+              <input type="text" value="${escapeAttr(e.unit)}" placeholder="單位" oninput="updateReviewField(${i}, 'unit', this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="review-field-row">
+          <div class="review-field full">
+            <label>備註</label>
+            <input type="text" value="${escapeAttr(e.note)}" placeholder="例如 快用完了" oninput="updateReviewField(${i}, 'note', this.value)">
+          </div>
+        </div>
+        <div class="review-field-row">
+          <div class="review-field full">
+            <label>放入／購買時間（口語描述，選填）</label>
+            <input type="text" value="${escapeAttr(e.placed_at_raw)}" placeholder="例如 上禮拜、今天、上個月" oninput="updateReviewField(${i}, 'placed_at_raw', this.value)">
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function escapeAttr(val) {
+    return String(val ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  function updateReviewField(index, field, value) {
+    if (!reviewQueue[index]) return;
+    reviewQueue[index][field] = value;
+  }
+
+  function removeReviewItem(index) {
+    reviewQueue.splice(index, 1);
+    renderReviewQueue();
+  }
+
+  function confirmReviewQueue() {
+    if (reviewQueue.length === 0) return;
+
+    const confirmedAt = new Date().toISOString();
+    const timing = reviewMeta.timing || {};
+    const finalized = reviewQueue.map(e => ({
+      location_id: e.location_id.trim(),
+      location_label: e.location_label.trim(),
+      item: e.item.trim(),
+      category: e.category,
+      quantity: e.quantity === '' ? null : Number(e.quantity),
+      unit: e.unit.trim(),
+      note: e.note.trim(),
+      placed_at_raw: e.placed_at_raw.trim(), // 使用者口語描述的實際放入/購買時間，例如「上禮拜」
+      input_started_at: timing.startedAt || confirmedAt, // 開始說話／拍照／打字的時間
+      submitted_at: timing.submittedAt || confirmedAt,   // 送出給 AI 解析的時間
+      confirmed_at: confirmedAt,                          // 使用者確認加入庫存的時間
+      timestamp: confirmedAt, // 保留舊欄位以相容先前版本資料
+      raw_transcript: reviewMeta.sourceLabel
+    })).filter(e => e.item.length > 0);
+
+    finalized.forEach(e => entries.push(e));
+
+    historyLog.unshift({
+      id: 'h_' + Date.now(),
+      timestamp: confirmedAt,
+      source: reviewMeta.source,
+      sourceLabel: reviewMeta.sourceLabel,
+      items: finalized,
+      undone: false
+    });
+
+    renderLog();
+    renderHistory();
+    closeReviewQueue();
+  }
+
+  // ===== History =====
+  const sourceIcons = { voice: '🎙️', text: '⌨️', photo: '📷' };
+
+  function toggleHistory() {
+    const panel = document.getElementById('historyPanel');
+    const caret = document.getElementById('historyCaret');
+    panel.classList.toggle('show');
+    caret.classList.toggle('open');
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('historyContainer');
+    const empty = document.getElementById('historyEmpty');
+    document.getElementById('historyCount').textContent = `${historyLog.length} 筆`;
+
+    if (historyLog.length === 0) {
+      container.innerHTML = '';
+      container.appendChild(empty);
+      return;
+    }
+
+    container.innerHTML = historyLog.map(h => {
+      const time = new Date(h.timestamp).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const icon = sourceIcons[h.source] || '📝';
+      const itemNames = h.items.map(e => e.item).join('、');
+      return `
+        <div class="history-entry">
+          <div class="history-entry-top">
+            <span class="history-entry-icon">${icon}</span>
+            <span class="history-entry-time">${time}</span>
+            <span class="history-entry-count">${h.items.length} 項</span>
+          </div>
+          <div class="history-entry-items">${h.undone ? '（已復原）' : itemNames}</div>
+          <div class="history-entry-actions">
+            <button class="history-undo-btn" ${h.undone ? 'disabled' : ''} onclick="undoHistoryBatch('${h.id}')">
+              ${h.undone ? '已復原' : '↩ 復原這批'}
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function undoHistoryBatch(id) {
+    const batch = historyLog.find(h => h.id === id);
+    if (!batch || batch.undone) return;
+    if (!confirm(`確定要從庫存中移除這一批 ${batch.items.length} 項物品嗎？`)) return;
+
+    // Remove entries that match this batch by reference identity via timestamp+item+location combo
+    batch.items.forEach(target => {
+      const idx = entries.findIndex(e =>
+        e.timestamp === target.timestamp &&
+        e.item === target.item &&
+        e.location_id === target.location_id &&
+        e.note === target.note
+      );
+      if (idx !== -1) entries.splice(idx, 1);
+    });
+
+    batch.undone = true;
+    renderLog();
+    renderHistory();
+  }
+
+  let currentViewMode = 'category';
+  let expandedGroups = new Set();
+
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    document.getElementById('viewByCategory').classList.toggle('active', mode === 'category');
+    document.getElementById('viewByLocation').classList.toggle('active', mode === 'location');
+    expandedGroups.clear();
+    renderLog();
+  }
+
+  const categoryIcons = {
+    '文具': '✏️', '電子用品': '🔌', '清潔用品': '🧴', '廚房用品': '🍳',
+    '衛浴用品': '🧻', '食品': '🥫', '衣物': '👕', '工具': '🔧',
+    '配件': '👓', '文件': '📄', '玩具': '🧸', '其他': '📦'
+  };
+
+  function groupKey(entry) {
+    if (currentViewMode === 'category') {
+      return entry.category || '其他';
+    } else {
+      return entry.location_id
+        ? `${entry.location_id}${entry.location_label ? ' · ' + entry.location_label : ''}`
+        : (entry.location_label || '未分類位置');
+    }
+  }
+
+  function renderLog() {
+    const container = document.getElementById('logContainer');
+    const empty = document.getElementById('emptyState');
+
+    if (entries.length === 0) {
+      container.innerHTML = '';
+      container.appendChild(empty);
+      document.getElementById('jsonToggle').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('jsonToggle').style.display = 'block';
+
+    // Group entries
+    const groups = {};
+    entries.forEach((e, idx) => {
+      const key = groupKey(e);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push({ ...e, _idx: idx });
+    });
+
+    const sortedKeys = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+
+    container.innerHTML = sortedKeys.map(key => {
+      const items = groups[key];
+      const isExpanded = expandedGroups.has(key);
+      const icon = currentViewMode === 'category' ? (categoryIcons[key] || '📦') : '🗄️';
+
+      const itemRows = items.map(e => `
+        <div class="tree-item-row">
+          ${currentViewMode === 'category' && e.location_id ? `<span class="tree-item-loc">${e.location_id}</span>` : ''}
+          <span class="tree-item-name">${e.item}</span>
+          ${e.quantity !== null && e.quantity !== undefined ? `<span class="tree-item-qty">${e.quantity}${e.unit ? ' ' + e.unit : ''}</span>` : ''}
+          ${e.note ? `<div class="tree-item-note">備註：${e.note}</div>` : ''}
+        </div>
+      `).join('');
+
+      return `
+        <div class="tree-group ${isExpanded ? 'expanded' : ''}" data-key="${encodeURIComponent(key)}">
+          <div class="tree-group-header" onclick="toggleGroup('${encodeURIComponent(key)}')">
+            <span class="tree-caret">▸</span>
+            <span class="tree-group-icon">${icon}</span>
+            <span class="tree-group-title">${key}</span>
+            <span class="tree-group-count">${items.length} 項</span>
+          </div>
+          <div class="tree-group-body">${itemRows}</div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('jsonBox').textContent = JSON.stringify(entries, null, 2);
+  }
+
+  function toggleGroup(encodedKey) {
+    const key = decodeURIComponent(encodedKey);
+    if (expandedGroups.has(key)) {
+      expandedGroups.delete(key);
+    } else {
+      expandedGroups.add(key);
+    }
+    renderLog();
+  }
+
+  function toggleJsonView() {
+    const box = document.getElementById('jsonBox');
+    const toggle = document.getElementById('jsonToggle');
+    box.classList.toggle('show');
+    toggle.textContent = box.classList.contains('show') ? '▴ 隱藏原始 JSON 資料' : '▾ 顯示原始 JSON 資料';
+  }
+
+  // ===== 新增：匯入 JSON 功能 =====
+  function uploadJson() {
+    // 點擊按鈕時，去觸發隱藏的 input file 控制項
+    document.getElementById('jsonFileInput').click();
+  }
+
+  function handleJsonImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        
+        // 基本資料結構格式檢查
+        if (Array.isArray(importedData)) {
+          // 直接覆蓋現有資料（或改用 entries = entries.concat(importedData) 來變成用追加的方式）
+          entries = importedData;
+          expandedGroups.clear();
+          renderLog();
+          alert(`成功匯入 ${entries.length} 筆庫存紀錄！`);
+        } else {
+          throw new Error('JSON 格式必須為陣列物件 [ ... ]');
+        }
+      } catch (err) {
+        alert('匯入失敗，請確保上傳的是正確的 HomeBase 備份 JSON 檔案。錯誤訊息: ' + err.message);
+      }
+      // 清空 input 讓同一個檔案可以重複選取觸發
+      event.target.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  function downloadJson() {
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `homebase-inventory-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function clearLog() {
+    if (confirm('確定要清空所有紀錄嗎？清空前請確保已匯出備份。')) {
+      entries = [];
+      expandedGroups.clear();
+      renderLog();
+    }
+  }
+
+  async function doSearch() {
+    const query = document.getElementById('searchInput').value.trim();
+    const resultBox = document.getElementById('searchResult');
+    const btn = document.getElementById('searchBtn');
+
+    if (!query) return;
+
+    if (entries.length === 0) {
+      resultBox.innerHTML = `<div class="search-not-found">目前還沒有任何庫存紀錄，請先新增物品。</div>`;
+      resultBox.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '搜尋中⋯';
+    resultBox.classList.remove('show');
+
+    const prompt = `你是一個家庭庫存搜尋助手。以下是使用者家中的庫存資料（JSON 陣列），以及使用者的搜尋問題。
+
+庫存資料：
+${JSON.stringify(entries.map(e => ({
+  location_id: e.location_id, location_label: e.location_label,
+  item: e.item, category: e.category, quantity: e.quantity, unit: e.unit, note: e.note
+})), null, 2)}
+
+使用者搜尋：「${query}」
+
+請找出與搜尋最相關的物品（同義詞、近似詞也要考慮，例如搜尋「眼鏡」應該要能找到「太陽眼鏡」、「老花眼鏡」等相關項目）。以 JSON 格式回應，不要任何其他文字：
+
+{
+  "found": true 或 false,
+  "answer": "用一句自然語言回答使用者，例如「眼鏡在 A1 廚房上層抽屜，共有 2 副」，若找不到則說明原因",
+  "matches": [
+    { "location_id": "...", "location_label": "...", "item": "...", "quantity": ..., "unit": "...", "note": "..." }
+  ]
+}
+
+若完全找不到相關物品，found 設為 false，matches 設為空陣列。`;
+
+    try {
+      const rawText = await callAI(prompt);
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI 回應格式異常');
+
+      const result = JSON.parse(jsonMatch[0]);
+      renderSearchResult(result);
+
+    } catch (err) {
+      resultBox.innerHTML = `<div class="search-not-found">搜尋失敗：${err.message}</div>`;
+      resultBox.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '搜尋';
+    }
+  }
+
+  function renderSearchResult(result) {
+    const resultBox = document.getElementById('searchResult');
+
+    if (!result.found || !result.matches || result.matches.length === 0) {
+      resultBox.innerHTML = `<div class="search-not-found">🔍 ${result.answer || '找不到相關物品'}</div>`;
+      resultBox.classList.add('show');
+      return;
+    }
+
+    const hits = result.matches.map(m => `
+      <div class="search-hit">
+        ${m.location_id ? `<span class="search-hit-loc">${m.location_id}</span>` : ''}
+        <span class="search-hit-item">${m.item}${m.location_label ? ' · ' + m.location_label : ''}</span>
+        ${m.quantity !== null && m.quantity !== undefined ? `<span class="search-hit-qty">${m.quantity}${m.unit ? ' ' + m.unit : ''}</span>` : ''}
+      </div>
+    `).join('');
+
+    resultBox.innerHTML = `
+      <div class="search-answer">💬 ${result.answer}</div>
+      <div class="search-result-found">${hits}</div>
+    `;
+    resultBox.classList.add('show');
+  }
+
+  // Init
+  document.addEventListener('DOMContentLoaded', () => {
+    initRecognition();
+    loadSettings();
+    renderHistory();
+  });
+</script>
+</body>
+</html>
