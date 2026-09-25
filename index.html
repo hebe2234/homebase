@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HomeBase · 語音建檔測試</title>
+<title>HomeBase</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -664,6 +664,19 @@
   .scan-created-note {
     font-size: 0.8rem; color: var(--accent); font-weight: 700; margin-bottom: 0.6rem;
   }
+
+  /* ===== 雲端多檔切換＋分享 ===== */
+  #cloudFileSelect { cursor: pointer; }
+  #cloudShareQrBox svg { max-width: 240px; height: auto; display: block; }
+
+  /* ===== 空間卡片：物品 chips ===== */
+  .space-items-row { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.5rem 0; }
+  .space-item-chip {
+    background: var(--soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 0.15rem 0.55rem; font-size: 0.75rem; color: inherit;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .space-item-more { font-size: 0.75rem; color: var(--muted); align-self: center; }
 </style>
 </head>
 <body>
@@ -680,20 +693,9 @@
 
   <!-- ===== Tab：tab-add ===== -->
   <section class="tab-section" id="tab-add">
-  <div class="lang-row" style="display:grid; grid-template-columns: repeat(3, 1fr);">
-    <button class="lang-btn active" id="inputVoice" onclick="setInputMode('voice')" data-i18n="inputVoice">🎙️ 語音輸入</button>
-    <button class="lang-btn" id="inputText" onclick="setInputMode('text')" data-i18n="inputText">⌨️ 文字輸入</button>
-    <button class="lang-btn" id="inputPhoto" onclick="setInputMode('photo')" data-i18n="inputPhoto">📷 拍照輸入</button>
-  </div>
-
-  <div class="mic-card" id="micCard">
-    <div class="waveform" id="waveform">
-      <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-      <div class="wave-bar"></div><div class="wave-bar"></div>
-    </div>
-    <button class="mic-btn" id="micBtn" onclick="toggleRecording()">🎙️</button>
-    <div class="mic-status" id="micStatus">點擊開始錄音</div>
-    <div class="mic-hint" id="micHint">例：「A1 廚房上層抽屜，電池三顆，快用完了」</div>
+  <div class="lang-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+    <button class="lang-btn active" id="inputPhoto" onclick="setInputMode('photo')" data-i18n="inputPhoto">📷 拍照建檔</button>
+    <button class="lang-btn" id="inputText" onclick="setInputMode('text')" data-i18n="inputText">✏️ 文字建檔</button>
   </div>
 
   <div class="text-card" id="textCard" style="display:none">
@@ -701,7 +703,7 @@
     <div class="text-hint" id="textHintLabel">可一次輸入多筆，AI 會自動拆解每個物品</div>
   </div>
 
-  <div class="photo-card" id="photoCard" style="display:none">
+  <div class="photo-card" id="photoCard">
     <div class="photo-upload-zone" id="photoUploadZone">
       <input type="file" accept="image/*" capture="environment" id="photoInput" onchange="handlePhotoSelect(event)">
       <div class="photo-upload-icon">📷</div>
@@ -714,12 +716,7 @@
     </div>
   </div>
 
-  <div class="transcript-box" id="transcriptBox">
-    <div class="transcript-label" data-i18n="transcriptLabel">語音辨識結果</div>
-    <div class="transcript-text" id="transcriptText"></div>
-  </div>
-
-  <button class="process-btn" id="processBtn" disabled onclick="processTranscript()" data-i18n="processText">AI 解析並建檔</button>
+  <button class="process-btn" id="processBtn" disabled onclick="processTranscript()" data-i18n="processPhoto">AI 辨識照片並建檔</button>
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
@@ -728,6 +725,8 @@
 
   <div class="error-box" id="errorBox"></div>
 
+  <div id="photoInventoryPreview" style="margin-top:0.75rem"></div>
+
   </section>
 
   <!-- ===== Tab：tab-spaces ===== -->
@@ -735,13 +734,10 @@
   <div class="log-header">
     <span class="log-title" data-i18n="spacesTitle">我的空間</span>
   </div>
-  <!-- 拍照辨識空間：主要建立流程 -->
-  <button class="scan-cta" id="scanRoomBtn" onclick="triggerSpaceScan()">
-    <span>📷</span><span data-i18n="scanRoomCta">拍照辨識空間</span>
+  <!-- 拍照建檔：跳轉到 Add tab 的拍照流程 -->
+  <button class="scan-cta" onclick="switchTab('add');setInputMode('photo')">
+    <span>📷</span><span data-i18n="spacesGoPhoto">拍照建檔</span>
   </button>
-  <div class="scan-loading" id="scanLoading"><span data-i18n="scanLoading">AI 辨識空間中…</span></div>
-  <div class="scan-error" id="scanErrorBox"></div>
-  <div id="scanPreview"></div>
   <div class="scan-manual-row">
     <button class="scan-manual-link" onclick="toggleManualAddSpace()" data-i18n="scanManualLink">手動新增房間</button>
   </div>
@@ -751,7 +747,6 @@
   </div>
   <div id="spacesContainer"></div>
   <input type="file" id="spacePhotoInput" accept="image/*" style="display:none" onchange="handleSpacePhotoSelect(event)">
-  <input type="file" id="spaceScanInput" accept="image/*" capture="environment" style="display:none" onchange="handleSpaceScanSelect(event)">
   </section>
 
   <!-- ===== Tab：tab-items ===== -->
@@ -890,8 +885,19 @@
       </div>
     </div>
 
+    <div class="settings-note warn" id="cloudShareCard" style="display:none">
+      <div><span data-i18n="cloudShareGot">收到分享的雲端檔案：</span><code id="cloudShareFileName" style="font-family:monospace; word-break:break-all"></code></div>
+      <div class="settings-field" style="margin:0.5rem 0">
+        <input type="password" class="settings-input" id="cloudSharePw" data-i18n-placeholder="cloudPwPh" placeholder="輸入雲端密碼" autocomplete="new-password">
+      </div>
+      <div class="settings-actions">
+        <button class="log-btn" onclick="cloudBindSharedLink()" data-i18n="cloudFetchBind">載入並綁定</button>
+        <button class="log-btn" onclick="cloudDismissShareCard()" data-i18n="cloudCancel">取消</button>
+      </div>
+    </div>
+
     <div class="settings-field">
-      <label class="settings-label" data-i18n="cloudPwLabel">雲端密碼（至少 8 字元，僅本次開啟有效）</label>
+      <label class="settings-label" data-i18n="cloudPwLabel">目前檔案的雲端密碼（至少 8 字元，僅本次開啟有效）</label>
       <input type="password" class="settings-input" id="cloudPwInput" data-i18n-placeholder="cloudPwPh" placeholder="輸入雲端密碼" oninput="onCloudPwInput()" autocomplete="new-password">
       <div class="settings-note" id="cloudPwStatus" style="margin-top:0.25rem"></div>
     </div>
@@ -899,7 +905,7 @@
     <div class="settings-field">
       <label class="settings-label" data-i18n="cloudFileLabel">我的雲端檔名</label>
       <div style="display:flex; gap:0.5rem">
-        <input type="text" class="settings-input" id="cloudFileName" readonly style="flex:1; font-family:monospace">
+        <select class="settings-input" id="cloudFileSelect" onchange="onCloudFileSwitch()" style="flex:1; font-family:monospace; cursor:pointer"></select>
         <button class="log-btn" onclick="copyCloudFileName()" data-i18n="cloudCopy">複製</button>
       </div>
     </div>
@@ -917,10 +923,22 @@
     <div class="settings-actions">
       <button class="log-btn" onclick="cloudSyncNow()" data-i18n="cloudSyncNow">⬆ 立即同步</button>
       <button class="log-btn" onclick="cloudShowHistory()" data-i18n="cloudHistory">🕰️ 版本歷史</button>
+      <button class="log-btn" onclick="cloudBrowseServer()" data-i18n="cloudServerBtn">🔍 瀏覽伺服器檔案</button>
     </div>
     <div class="settings-note" id="cloudStatus"></div>
     <div class="settings-note warn" id="cloudError" style="display:none"></div>
     <div id="cloudHistoryBox" style="display:none; margin-top:0.75rem"></div>
+    <div id="cloudServerListBox" style="display:none; margin-top:0.75rem"></div>
+
+    <div class="settings-section-title" data-i18n="cloudShareTitle" style="margin-top:1rem">📤 分享此雲端檔</div>
+    <div class="settings-actions">
+      <button class="log-btn" onclick="cloudShareQR()" data-i18n="cloudShareQrBtn">產生分享 QR Code</button>
+      <button class="log-btn" onclick="cloudShareLinkCopy()" data-i18n="cloudShareLinkBtn">複製分享連結</button>
+    </div>
+    <div id="cloudShareQrBox" style="margin-top:0.75rem"></div>
+    <div class="settings-note warn" data-i18n="cloudShareWarn">
+      ⚠️ QR Code 內含密碼：掃碼的人可以直接讀取並解密此雲端檔，請只傳給信任的人。分享連結不含密碼，對方需要自行輸入密碼才能載入。
+    </div>
 
     <div class="settings-section-title" data-i18n="cloudFetchTitle" style="margin-top:1rem">讀取他人的雲端資料</div>
     <div class="settings-field">
@@ -995,6 +1013,11 @@
     </div>
   </div>
 </div>
+
+<script>
+/* qrcode-generator 1.4.4 (MIT License, Kazuhiko Arase) — 內嵌以支援離線產生分享 QR Code */
+var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(l=4*u+17),e(0,0),e(l-7,0),e(0,l-7),i(),o(),v(t,r),7<=u&&h(t),null==n&&(n=w(u,f,c)),d(n,r)}var u=t,f=y[r],g=null,l=0,n=null,c=[],s={},e=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||l<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||l<=r+n||(g[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},o=function(){for(var t=8;t<l-8;t+=1)null==g[t][6]&&(g[t][6]=t%2==0);for(var r=8;r<l-8;r+=1)null==g[6][r]&&(g[6][r]=r%2==0)},i=function(){for(var t=B.getPatternPosition(u),r=0;r<t.length;r+=1)for(var e=0;e<t.length;e+=1){var n=t[r],o=t[e];if(null==g[n][o])for(var i=-2;i<=2;i+=1)for(var a=-2;a<=2;a+=1)g[n+i][o+a]=-2==i||2==i||-2==a||2==a||0==i&&0==a}},h=function(t){for(var r=B.getBCHTypeNumber(u),e=0;e<18;e+=1){var n=!t&&1==(r>>e&1);g[Math.floor(e/3)][e%3+l-8-3]=n}for(e=0;e<18;e+=1){n=!t&&1==(r>>e&1);g[e%3+l-8-3][Math.floor(e/3)]=n}},v=function(t,r){for(var e=f<<3|r,n=B.getBCHTypeInfo(e),o=0;o<15;o+=1){var i=!t&&1==(n>>o&1);o<6?g[o][8]=i:o<8?g[o+1][8]=i:g[l-15+o][8]=i}for(o=0;o<15;o+=1){i=!t&&1==(n>>o&1);o<8?g[8][l-o-1]=i:o<9?g[8][15-o-1+1]=i:g[8][15-o-1]=i}g[l-8][8]=!t},d=function(t,r){for(var e=-1,n=l-1,o=7,i=0,a=B.getMaskFunction(r),u=l-1;0<u;u-=2)for(6==u&&(u-=1);;){for(var f=0;f<2;f+=1)if(null==g[n][u-f]){var c=!1;i<t.length&&(c=1==(t[i]>>>o&1)),a(n,u-f)&&(c=!c),g[n][u-f]=c,-1==(o-=1)&&(i+=1,o=7)}if((n+=e)<0||l<=n){n-=e,e=-e;break}}},w=function(t,r,e){for(var n=b.getRSBlocks(t,r),o=M(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=C(i[u],l.getLength()-1).mod(l);a[u]=new Array(l.getLength()-1);for(g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=0<=s?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};s.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=x(t);break;case"Alphanumeric":e=m(t);break;case"Byte":e=L(t);break;case"Kanji":e=D(t);break;default:throw"mode:"+r}c.push(e),n=null},s.isDark=function(t,r){if(t<0||l<=t||r<0||l<=r)throw t+","+r;return g[t][r]},s.getModuleCount=function(){return l},s.make=function(){if(u<1){for(var t=1;t<40;t++){for(var r=b.getRSBlocks(t,f),e=M(),n=0;n<c.length;n++){var o=c[n];e.put(o.getMode(),4),e.put(o.getLength(),B.getLengthInBits(o.getMode(),t)),o.write(e)}var i=0;for(n=0;n<r.length;n++)i+=r[n].dataCount;if(e.getLengthInBits()<=8*i)break}u=t}a(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){a(!0,e);var n=B.getLostPoint(s);(0==e||n<t)&&(t=n,r=e)}return r}())},s.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<s.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<s.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=s.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},s.createSvgTag=function(t,r,e,n){var o={};"object"==typeof t&&(t=(o=t).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,f,c=s.getModuleCount()*t+2*r,g="";for(f="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",g+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',g+=o.scalable?"":' width="'+c+'px" height="'+c+'px"',g+=' viewBox="0 0 '+c+" "+c+'" ',g+=' preserveAspectRatio="xMinYMin meet"',g+=n.text||e.text?' role="img" aria-labelledby="'+p([n.id,e.id].join(" ").trim())+'"':"",g+=">",g+=n.text?'<title id="'+p(n.id)+'">'+p(n.text)+"</title>":"",g+=e.text?'<description id="'+p(e.id)+'">'+p(e.text)+"</description>":"",g+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',g+='<path d="',a=0;a<s.getModuleCount();a+=1)for(u=a*t+r,i=0;i<s.getModuleCount();i+=1)s.isDark(a,i)&&(g+="M"+(i*t+r)+","+u+f);return g+='" stroke="transparent" fill="black"/>',g+="</svg>"},s.createDataURL=function(o,t){o=o||2,t=void 0===t?4*o:t;var r=s.getModuleCount()*o+2*t,i=t,a=r-t;return I(r,r,function(t,r){if(i<=t&&t<a&&i<=r&&r<a){var e=Math.floor((t-i)/o),n=Math.floor((r-i)/o);return s.isDark(n,e)?0:1}return 1})},s.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=s.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=s.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=p(e),o+='"'),o+="/>"};var p=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return s.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*s.getModuleCount()+2*t,u=t,f=a-t,c={"██":"█","█ ":"▀"," █":"▄","  ":" "},g={"██":"▀","█ ":"▀"," █":" ","  ":" "},l="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<f&&u<=r&&r<f&&s.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<f&&u<=r+1&&r+1<f&&s.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",l+=t<1&&f<=r+1?g[i]:c[i];l+="\n"}return a%2&&0<t?l.substring(0,l.length-a-1)+Array(1+a).join("▀"):l.substring(0,l.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=s.getModuleCount()*t+2*r,u=r,f=a-r,c=Array(t+1).join("██"),g=Array(t+1).join("  "),l="",h="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),h="",n=0;n<a;n+=1)i=1,u<=n&&n<f&&u<=e&&e<f&&s.isDark(o,Math.floor((n-u)/t))&&(i=0),h+=i?c:g;for(o=0;o<t;o+=1)l+=h+"\n"}return l.substring(0,l.length-1)},s.renderTo2dContext=function(t,r){r=r||2;for(var e=s.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=s.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},s}i.stringToBytes=(i.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,i.createStringToBytes=function(u,f){var i=function(){function t(){var t=r.read();if(-1==t)throw"eof";return t}for(var r=S(u),e=0,n={};;){var o=r.read();if(-1==o)break;var i=t(),a=t()<<8|t();n[String.fromCharCode(o<<8|i)]=a,e+=1}if(e!=f)throw e+" != "+f;return n}(),a="?".charCodeAt(0);return function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);if(n<128)r.push(n);else{var o=i[t.charAt(e)];"number"==typeof o?(255&o)==o?r.push(o):(r.push(o>>>8),r.push(255&o)):r.push(a)}}return r}};var r,t,a=1,u=2,o=4,f=8,y={L:1,M:0,Q:3,H:2},e=0,n=1,c=2,g=3,l=4,h=5,s=6,v=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],(t={}).getBCHTypeInfo=function(t){for(var r=t<<10;0<=d(r)-d(1335);)r^=1335<<d(r)-d(1335);return 21522^(t<<10|r)},t.getBCHTypeNumber=function(t){for(var r=t<<12;0<=d(r)-d(7973);)r^=7973<<d(r)-d(7973);return t<<12|r},t.getPatternPosition=function(t){return r[t-1]},t.getMaskFunction=function(t){switch(t){case e:return function(t,r){return(t+r)%2==0};case n:return function(t,r){return t%2==0};case c:return function(t,r){return r%3==0};case g:return function(t,r){return(t+r)%3==0};case l:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case h:return function(t,r){return t*r%2+t*r%3==0};case s:return function(t,r){return(t*r%2+t*r%3)%2==0};case v:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},t.getErrorCorrectPolynomial=function(t){for(var r=C([1],0),e=0;e<t;e+=1)r=r.multiply(C([1,w.gexp(e)],0));return r},t.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case o:case f:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case o:return 16;case f:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case o:return 16;case f:return 12;default:throw"mode:"+t}}},t.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);5<i&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},t);function d(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r}var w=function(){for(var r=new Array(256),e=new Array(256),t=0;t<8;t+=1)r[t]=1<<t;for(t=8;t<256;t+=1)r[t]=r[t-4]^r[t-5]^r[t-6]^r[t-8];for(t=0;t<255;t+=1)e[r[t]]=t;var n={glog:function(t){if(t<1)throw"glog("+t+")";return e[t]},gexp:function(t){for(;t<0;)t+=255;for(;256<=t;)t-=255;return r[t]}};return n}();function C(n,o){if(void 0===n.length)throw n.length+"/"+o;var r=function(){for(var t=0;t<n.length&&0==n[t];)t+=1;for(var r=new Array(n.length-t+o),e=0;e<n.length-t;e+=1)r[e]=n[e+t];return r}(),i={getAt:function(t){return r[t]},getLength:function(){return r.length},multiply:function(t){for(var r=new Array(i.getLength()+t.getLength()-1),e=0;e<i.getLength();e+=1)for(var n=0;n<t.getLength();n+=1)r[e+n]^=w.gexp(w.glog(i.getAt(e))+w.glog(t.getAt(n)));return C(r,0)},mod:function(t){if(i.getLength()-t.getLength()<0)return i;for(var r=w.glog(i.getAt(0))-w.glog(t.getAt(0)),e=new Array(i.getLength()),n=0;n<i.getLength();n+=1)e[n]=i.getAt(n);for(n=0;n<t.getLength();n+=1)e[n]^=w.gexp(w.glog(t.getAt(n))+r);return C(e,0).mod(t)}};return i}function p(){var e=[],o={writeByte:function(t){e.push(255&t)},writeShort:function(t){o.writeByte(t),o.writeByte(t>>>8)},writeBytes:function(t,r,e){r=r||0,e=e||t.length;for(var n=0;n<e;n+=1)o.writeByte(t[n+r])},writeString:function(t){for(var r=0;r<t.length;r+=1)o.writeByte(t.charCodeAt(r))},toByteArray:function(){return e},toString:function(){var t="";t+="[";for(var r=0;r<e.length;r+=1)0<r&&(t+=","),t+=e[r];return t+="]"}};return o}var k,A,b=(k=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],(A={}).getRSBlocks=function(t,r){var e=function(t,r){switch(r){case y.L:return k[4*(t-1)+0];case y.M:return k[4*(t-1)+1];case y.Q:return k[4*(t-1)+2];case y.H:return k[4*(t-1)+3];default:return}}(t,r);if(void 0===e)throw"bad rs block @ typeNumber:"+t+"/errorCorrectionLevel:"+r;for(var n,o,i=e.length/3,a=[],u=0;u<i;u+=1)for(var f=e[3*u+0],c=e[3*u+1],g=e[3*u+2],l=0;l<f;l+=1)a.push((n=g,o=void 0,(o={}).totalCount=c,o.dataCount=n,o));return a},A),M=function(){var e=[],n=0,o={getBuffer:function(){return e},getAt:function(t){var r=Math.floor(t/8);return 1==(e[r]>>>7-t%8&1)},put:function(t,r){for(var e=0;e<r;e+=1)o.putBit(1==(t>>>r-e-1&1))},getLengthInBits:function(){return n},putBit:function(t){var r=Math.floor(n/8);e.length<=r&&e.push(0),t&&(e[r]|=128>>>n%8),n+=1}};return o},x=function(t){var r=a,n=t,e={getMode:function(){return r},getLength:function(t){return n.length},write:function(t){for(var r=n,e=0;e+2<r.length;)t.put(o(r.substring(e,e+3)),10),e+=3;e<r.length&&(r.length-e==1?t.put(o(r.substring(e,e+1)),4):r.length-e==2&&t.put(o(r.substring(e,e+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return e},m=function(t){var r=u,n=t,e={getMode:function(){return r},getLength:function(t){return n.length},write:function(t){for(var r=n,e=0;e+1<r.length;)t.put(45*o(r.charAt(e))+o(r.charAt(e+1)),11),e+=2;e<r.length&&t.put(o(r.charAt(e)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return e},L=function(t){var r=o,e=i.stringToBytes(t),n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=0;r<e.length;r+=1)t.put(e[r],8)}};return n},D=function(t){var r=f,e=i.stringToBytesFuncs.SJIS;if(!e)throw"sjis not supported.";!function(){var t=e("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=e(t),n={getMode:function(){return r},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return n},S=function(t){var e=t,n=0,o=0,i=0,r={read:function(){for(;i<8;){if(n>=e.length){if(0==i)return-1;throw"unexpected end of file./"+i}var t=e.charAt(n);if(n+=1,"="==t)return i=0,-1;t.match(/^\s$/)||(o=o<<6|a(t.charCodeAt(0)),i+=6)}var r=o>>>i-8&255;return i-=8,r}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return r},I=function(t,r,e){for(var n=function(t,r){var n=t,o=r,l=new Array(t*r),e={setPixel:function(t,r,e){l[r*n+t]=e},write:function(t){t.writeString("GIF87a"),t.writeShort(n),t.writeShort(o),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(n),t.writeShort(o),t.writeByte(0);var r=i(2);t.writeByte(2);for(var e=0;255<r.length-e;)t.writeByte(255),t.writeBytes(r,e,255),e+=255;t.writeByte(r.length-e),t.writeBytes(r,e,r.length-e),t.writeByte(0),t.writeString(";")}},i=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,o=h(),i=0;i<r;i+=1)o.add(String.fromCharCode(i));o.add(String.fromCharCode(r)),o.add(String.fromCharCode(e));var a=p(),u=function(t){var e=t,n=0,o=0,r={write:function(t,r){if(t>>>r!=0)throw"length over";for(;8<=n+r;)e.writeByte(255&(t<<n|o)),r-=8-n,t>>>=8-n,n=o=0;o|=t<<n,n+=r},flush:function(){0<n&&e.writeByte(o)}};return r}(a);u.write(r,n);var f=0,c=String.fromCharCode(l[f]);for(f+=1;f<l.length;){var g=String.fromCharCode(l[f]);f+=1,o.contains(c+g)?c+=g:(u.write(o.indexOf(c),n),o.size()<4095&&(o.size()==1<<n&&(n+=1),o.add(c+g)),c=g)}return u.write(o.indexOf(c),n),u.write(e,n),u.flush(),a.toByteArray()},h=function(){var r={},e=0,n={add:function(t){if(n.contains(t))throw"dup key:"+t;r[t]=e,e+=1},size:function(){return e},indexOf:function(t){return r[t]},contains:function(t){return void 0!==r[t]}};return n};return e}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=p();n.write(a);for(var u=function(){function e(t){a+=String.fromCharCode(r(63&t))}var n=0,o=0,i=0,a="",t={},r=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return t.writeByte=function(t){for(n=n<<8|255&t,o+=8,i+=1;6<=o;)e(n>>>o-6),o-=6},t.flush=function(){if(0<o&&(e(n<<6-o),o=n=0),i%3!=0)for(var t=3-i%3,r=0;r<t;r+=1)a+="="},t.toString=function(){return a},t}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return i}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||57344<=n?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+</script>
 
 <script>
   // ===== AI Provider Configuration =====
@@ -1126,23 +1149,31 @@
   }
 
   // Unified AI call — routes to the right provider format and handles direct vs proxy calls
+  // images: 陣列 [{ data: base64, mime }]（拍照空間比對時會一次送多張：新照片＋各空間基準照）
   async function callAI(promptText, imageBase64, imageMime) {
     const p = PROVIDERS[aiConfig.provider];
     if (!aiConfig.apiKey) throw new Error(t('errNeedApiKey'));
     if (!p.directCall && !aiConfig.proxyUrl) throw new Error(t('errNeedProxy', { provider: p.label }));
 
+    let images = [];
+    if (Array.isArray(imageBase64)) {
+      images = imageBase64.filter(im => im && im.data).map(im => ({ data: im.data, mime: im.mime || 'image/jpeg' }));
+    } else if (imageBase64) {
+      images = [{ data: imageBase64, mime: imageMime || 'image/jpeg' }];
+    }
+
     if (aiConfig.provider === 'gemini') {
-      return callGeminiDirect(promptText, imageBase64, imageMime);
+      return callGeminiDirect(promptText, images);
     } else {
-      return callViaProxy(promptText, imageBase64, imageMime);
+      return callViaProxy(promptText, images);
     }
   }
 
-  async function callGeminiDirect(promptText, imageBase64, imageMime) {
+  async function callGeminiDirect(promptText, images) {
     const parts = [{ text: promptText }];
-    if (imageBase64) {
-      parts.unshift({ inline_data: { mime_type: imageMime || 'image/jpeg', data: imageBase64 } });
-    }
+    (images || []).forEach(im => {
+      parts.push({ inline_data: { mime_type: im.mime || 'image/jpeg', data: im.data } });
+    });
     const endpoint = PROVIDERS.gemini.defaultEndpoint.replace('MODEL_ID', aiConfig.model);
     const url = `${endpoint}?key=${encodeURIComponent(aiConfig.apiKey)}`;
     const response = await fetch(url, {
@@ -1163,7 +1194,8 @@
 
   // For providers that need a proxy: sends a normalized payload, expects { text: "..." } back.
   // Your proxy server should translate this into the target provider's actual API format.
-  async function callViaProxy(promptText, imageBase64, imageMime) {
+  async function callViaProxy(promptText, images) {
+    const imgs = (images || []).map(im => ({ mime_type: im.mime || 'image/jpeg', data: im.data }));
     const response = await fetch(aiConfig.proxyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1172,7 +1204,8 @@
         model: aiConfig.model,
         apiKey: aiConfig.apiKey,
         prompt: promptText,
-        image: imageBase64 ? { mime_type: imageMime || 'image/jpeg', data: imageBase64 } : null
+        image: imgs.length ? imgs[0] : null, // 向後相容：第一張圖
+        images: imgs
       })
     });
     const data = await response.json();
@@ -1182,17 +1215,19 @@
   }
 
   let currentLang = 'zh-TW';
-  let currentInputMode = 'voice';
-  let recognition = null;
-  let isRecording = false;
-  let finalTranscript = '';
+  let currentInputMode = 'photo';
   let entries = [];
   let historyLog = []; // [{ id, timestamp, source, sourceLabel, itemIds: [entryIndexAtTimeOfInsert...], items: [...] }]
   let reviewQueue = []; // working copy of entries currently being confirmed
   let reviewMeta = { sourceLabel: '', source: '' };
   let photoBase64 = null;
   let photoMime = 'image/jpeg';
-  let inputStartedAt = null; // timestamp when user began this input (first keystroke / recording start / photo taken)
+  let inputStartedAt = null; // timestamp when user began this input (first keystroke / photo taken)
+  // ===== 拍照建檔：AI 辨識空間＋物品 → 預覽 → 直接入庫 =====
+  // photoState = { newPhotoDataUrl, newPhotoBase64, roomName, roomType, zones: [name],
+  //   items: [{ name, zoneName, zoneId, qty, checked }], matchSpaceId ('new' 或空間 id),
+  //   confidence: 'high'|'medium'|'low', chosenSpaceId, refThumb, nameMatched, startedAt, submittedAt }
+  let photoState = null;
   // ===== 空間（Spaces）：房間 → 區域 → 物品 =====
   // space = { id, name, photo (dataURL JPEG 或 null), zones: [{ id, name }] }
   // entry 可選欄位 spaceId / zoneId；舊資料沒有這兩個欄位也能正常顯示
@@ -1209,21 +1244,17 @@
   }
 
   function setInputMode(mode) {
+    if (mode !== 'photo' && mode !== 'text') mode = 'text';
+    // 離開拍照模式時丟棄未確認的拍照預覽
+    if (currentInputMode === 'photo' && mode !== 'photo' && photoState) cancelPhotoInventory();
     currentInputMode = mode;
-    document.getElementById('inputVoice').classList.toggle('active', mode === 'voice');
-    document.getElementById('inputText').classList.toggle('active', mode === 'text');
     document.getElementById('inputPhoto').classList.toggle('active', mode === 'photo');
-    document.getElementById('micCard').style.display = mode === 'voice' ? 'block' : 'none';
-    document.getElementById('textCard').style.display = mode === 'text' ? 'block' : 'none';
+    document.getElementById('inputText').classList.toggle('active', mode === 'text');
     document.getElementById('photoCard').style.display = mode === 'photo' ? 'block' : 'none';
-    document.getElementById('transcriptBox').classList.remove('show');
+    document.getElementById('textCard').style.display = mode === 'text' ? 'block' : 'none';
 
     const btn = document.getElementById('processBtn');
-    if (mode === 'voice') {
-      if (isRecording) stopRecording();
-      btn.disabled = finalTranscript.trim().length === 0;
-      btn.textContent = t('processText');
-    } else if (mode === 'text') {
+    if (mode === 'text') {
       btn.disabled = document.getElementById('textInput').value.trim().length === 0;
       btn.textContent = t('processText');
     } else {
@@ -1286,16 +1317,15 @@
   }
 
   // ===== i18n：中英雙語（自動偵測系統語言 + 手動切換；選擇存於 localStorage 'homebase-lang'）=====
-  // 整合原本的 hints / textPlaceholders / textHints / statusIdle / statusRec /
   // searchPlaceholders / photoTitles / photoHints 與 setLang('zh-TW'/'en-US') 機制，
   // 統一為 I18N 字典 + t(key) + data-i18n 屬性。
   const LANG_KEY = 'homebase-lang';
   const I18N = {
     'zh-TW': {
-      docTitle: "HomeBase · 語音建檔測試",
+      docTitle: "HomeBase",
       langToggleTitle: "切換語言",
-      badge: "語音建檔測試",
-      subtitle: "說出物品位置、名稱、數量，AI 自動整理成結構化庫存資料",
+      badge: "家庭庫存管理",
+      subtitle: "拍照或文字輸入，AI 自動辨識空間與物品並整理成庫存",
       settingsTitle: "AI 設定",
       settingsStatusMissing: "未設定",
       settingsReady: "已設定 · {provider} {model}",
@@ -1323,27 +1353,45 @@
       settingsNoteKey: "API Key 僅儲存在你瀏覽器的 localStorage，不會上傳到任何伺服器。重新整理頁面不會消失，但換瀏覽器或清除快取會消失。",
       btnSaveSettings: "儲存設定",
       btnClearSettings: "清除",
-      inputVoice: "🎙️ 語音輸入",
-      inputText: "⌨️ 文字輸入",
-      inputPhoto: "📷 拍照輸入",
+      inputText: "✏️ 文字建檔",
+      inputPhoto: "📷 拍照建檔",
       searchPlaceholder: "找東西，例如：眼鏡在哪裡？",
       searchBtn: "搜尋",
       searching: "搜尋中⋯",
-      micHint: "例：「A1 廚房上層抽屜，電池三顆，快用完了」",
-      statusIdle: "點擊開始錄音",
-      statusRec: "正在聆聽⋯⋯點擊停止",
-      transcriptLabel: "語音辨識結果",
       textPlaceholder: "輸入物品位置、名稱、數量、備註，例如：A1 廚房上層抽屜，電池三顆，快用完了，還有剪刀一個",
       textHint: "可一次輸入多筆，AI 會自動拆解每個物品",
       photoTitle: "拍照或選擇相簿照片",
-      photoHint: "拍下櫃子、抽屜內部，AI 會自動辨識物品並建檔",
+      photoHint: "拍下房間一角，AI 會判斷是哪個空間並辨識物品",
       photoReselect: "✕ 重新選擇",
       photoPreviewAlt: "預覽",
       photoSourceLabel: "（來自照片辨識）",
+      photoMatchIs: "🔍 AI 判斷為：{name}",
+      photoMatchNew: "🆕 AI 判斷這是新空間",
+      photoMatchUnsure: "AI 不太確定，請確認空間是否正確",
+      photoNewPhotoLabel: "新照片",
+      photoRefLabel: "基準照片",
+      photoChooseSpace: "空間（可手動更改）",
+      photoOptNewSpace: "＋ 建立新空間",
+      photoNameMatchNote: "房間名稱與既有空間「{name}」相符，已自動選取；可手動更改",
+      photoRoomNameLabel: "房間名稱",
+      photoRoomTypeLabel: "房間類型",
+      photoZonesLabel: "區域（可增減）",
+      photoZonesLabelStatic: "此空間的區域",
+      photoAddZonePh: "新增區域…",
+      photoItemsLabel: "辨識到的物品（勾選要加入的）",
+      photoNoItems: "照片中沒有辨識到可加入的物品，仍可確認建立空間",
+      photoZoneUnset: "未指定",
+      photoQtyPh: "數量",
+      photoConfirm: "✅ 確認加入",
+      photoCancel: "取消",
+      photoAnalyzing: "AI 辨識空間與物品中⋯⋯",
+      photoAdded: "已加入 {n} 件物品到「{name}」",
+      photoRefNote: "每間空間會保留最近 3 張小尺寸照片作為辨識基準，僅存在本機，不會上傳到雲端。",
+      photoDefaultRoom: "未命名房間",
+      spacesGoPhoto: "拍照建檔",
       processText: "AI 解析並建檔",
       processPhoto: "AI 辨識照片並建檔",
       loadingParsing: "AI 正在解析語意⋯⋯",
-      loadingPhoto: "AI 正在辨識照片中的物品⋯⋯",
       historyTitle: "歷史紀錄",
       historyCount: "{n} 筆",
       historyEmpty: "還沒有任何輸入紀錄",
@@ -1360,7 +1408,7 @@
       emptyState: "還沒有任何紀錄，開始輸入或匯入檔案試試看",
       jsonShow: "▾ 顯示原始 JSON 資料",
       jsonHide: "▴ 隱藏原始 JSON 資料",
-      footerHtml: "語音與資料皆在瀏覽器本地處理，重新整理頁面將清除紀錄（建議透過匯出 JSON 備份）。<br>本工具使用瀏覽器原生語音辨識 + Claude AI 語意解析，僅供技術驗證用途。",
+      footerHtml: "物品與資料皆在瀏覽器本地處理（空間基準照片僅存於本機，不會上傳）。重新整理頁面將清除未同步的紀錄（建議開啟雲端同步備份）。<br>本工具使用 AI 影像與語意辨識，僅供個人家庭庫存管理使用。",
       reviewTitle: "確認辨識結果",
       reviewSubtitle: "共辨識出 {n} 項物品，請確認或修改後加入庫存",
       reviewCancel: "取消",
@@ -1390,9 +1438,6 @@
       searchNoData: "目前還沒有任何庫存紀錄，請先新增物品。",
       searchFail: "搜尋失敗：",
       searchNotFoundFallback: "找不到相關物品",
-      errNoSpeech: "您的瀏覽器不支援語音辨識，請使用 Chrome 或 Safari（建議手機版 Chrome / 桌面版 Chrome 或 Edge）。",
-      errSpeech: "語音辨識錯誤：",
-      errPhotoEmpty: "AI 未能從照片中辨識出明確的物品，請換個角度或更近距離拍攝後再試一次。",
       errTextEmpty: "AI 未能從內容中解析出物品，請換個方式描述後再試一次。",
       errParseFail: "解析失敗：",
       errNoJson: "AI 未回傳有效 JSON：",
@@ -1436,29 +1481,12 @@
       optNoSpace: "— 不指定 —",
       spaceFilterAll: "全部空間",
       spaceFilterLabel: "空間篩選",
-      scanRoomCta: "拍照辨識空間",
       scanManualLink: "手動新增房間",
-      scanLoading: "AI 辨識空間中…",
-      scanRoomNameLabel: "房間名稱",
-      scanRoomTypeLabel: "房間類型",
-      scanZonesLabel: "辨識到的區域",
-      scanAddZonePh: "新增區域…",
-      scanItemsLabel: "可見物品",
-      scanAddItemPh: "新增物品…",
-      scanConfirmSpace: "確認建立空間",
-      scanCancel: "取消",
-      scanAddToReview: "加入待審核",
-      scanCreated: "✓ 已建立",
-      scanClose: "關閉",
-      scanDefaultRoom: "未命名房間",
-      scanSourceLabel: "（來自空間辨識）",
-      scanErrEmpty: "AI 未能辨識出這個空間，請換個角度重拍一次。",
-      scanNoItems: "沒有辨識到清楚可見的物品",
       cloudTitle: "☁️ 雲端同步",
-      cloudDesc: "開啟後，每次資料變更都會自動把物品＋空間加密（AES-256）上傳到雲端，檔名為時間戳，他人輸入檔名＋密碼即可讀取。密碼只留存在本次開啟的記憶體中，關閉頁面即消失，不會上傳。",
+      cloudDesc: "開啟後，每次資料變更都會自動把物品＋空間加密（AES-256）上傳到雲端，檔名為時間戳。他人輸入檔名＋密碼即可讀取，也可用 QR Code 或連結分享。可綁定多個雲端檔案，透過下方下拉選單切換；每個檔案的密碼各自獨立。密碼只留存在本次開啟的記憶體中，關閉頁面即消失，不會上傳。",
       cloudRestorePrompt: "偵測到已綁定的雲端檔名，輸入密碼即可從雲端還原資料。",
       cloudRestoreBtn: "從雲端還原",
-      cloudPwLabel: "雲端密碼（至少 8 字元，僅本次開啟有效）",
+      cloudPwLabel: "目前檔案的雲端密碼（至少 8 字元，僅本次開啟有效）",
       cloudPwPh: "輸入雲端密碼",
       cloudPwSet: "✓ 密碼已設定（僅留存於記憶體）",
       cloudPwTooShort: "密碼至少需要 8 字元",
@@ -1501,13 +1529,26 @@
       cloudFetchInfo: "找到資料：物品 {n} 筆、空間 {m} 個（更新於 {time}）",
       cloudFetchBind: "載入並綁定",
       cloudBindConfirm: "載入後將取代目前所有資料，並綁定此檔名（之後自動同步會寫到同一個檔案）。確定嗎？",
-      cloudCancel: "取消"
+      cloudCancel: "取消",
+      cloudShareTitle: "📤 分享此雲端檔",
+      cloudShareQrBtn: "產生分享 QR Code",
+      cloudShareLinkBtn: "複製分享連結",
+      cloudShareWarn: "⚠️ QR Code 內含密碼：掃碼的人可以直接讀取並解密此雲端檔，請只傳給信任的人。分享連結不含密碼，對方需要自行輸入密碼才能載入。",
+      cloudShareNeedPw: "請先為目前檔案設定雲端密碼，才能產生含密碼的 QR Code",
+      cloudShareQrFail: "QR Code 產生失敗",
+      cloudShareQrDone: "已產生 {file} 的分享 QR Code（內含密碼）",
+      cloudShareLinkCopied: "已複製分享連結（不含密碼）",
+      cloudShareGot: "收到分享的雲端檔案：",
+      cloudSwitchNeedPw: "請輸入此檔案的雲端密碼",
+      cloudSwitched: "已切換到雲端檔 {file}",
+      cloudServerBtn: "🔍 瀏覽伺服器檔案",
+      cloudServerEmpty: "伺服器上沒有其他未綁定的檔案",
     },
     'en': {
-      docTitle: "HomeBase · Voice Inventory Demo",
+      docTitle: "HomeBase",
       langToggleTitle: "Switch language",
-      badge: "Voice Inventory Demo",
-      subtitle: "Speak or type item locations, names, and quantities — AI organizes them into structured inventory data",
+      badge: "Home Inventory",
+      subtitle: "Snap a photo or type text — AI recognizes the space and items into inventory",
       settingsTitle: "AI Settings",
       settingsStatusMissing: "Not set",
       settingsReady: "Set · {provider} {model}",
@@ -1535,27 +1576,45 @@
       settingsNoteKey: "Your API key is stored only in this browser's localStorage and never uploaded to any server. It survives page refreshes, but will be lost if you switch browsers or clear site data.",
       btnSaveSettings: "Save settings",
       btnClearSettings: "Clear",
-      inputVoice: "🎙️ Voice input",
-      inputText: "⌨️ Text input",
-      inputPhoto: "📷 Photo input",
+      inputText: "✏️ Text entry",
+      inputPhoto: "📷 Photo entry",
       searchPlaceholder: "Find something, e.g. \"Where are my glasses?\"",
       searchBtn: "Search",
       searching: "Searching…",
-      micHint: "e.g. \"A1 kitchen top drawer, three batteries, running low\"",
-      statusIdle: "Tap to start recording",
-      statusRec: "Listening… tap to stop",
-      transcriptLabel: "Speech recognition result",
       textPlaceholder: "Enter item locations, names, quantities, notes — e.g. \"A1 kitchen top drawer, three batteries, running low, plus one pair of scissors\"",
       textHint: "You can enter multiple items at once — AI will split them automatically",
       photoTitle: "Take a photo or choose from your library",
-      photoHint: "Photograph the inside of a cabinet or drawer — AI will identify items automatically",
+      photoHint: "Photograph a corner of a room — AI will match the space and identify items",
       photoReselect: "✕ Reselect",
       photoPreviewAlt: "Preview",
       photoSourceLabel: "(from photo recognition)",
+      photoMatchIs: "🔍 AI matched: {name}",
+      photoMatchNew: "🆕 AI thinks this is a new space",
+      photoMatchUnsure: "AI is not sure — please verify the space is correct",
+      photoNewPhotoLabel: "New photo",
+      photoRefLabel: "Reference photo",
+      photoChooseSpace: "Space (change manually)",
+      photoOptNewSpace: "+ Create new space",
+      photoNameMatchNote: "Room name matches existing space \"{name}\" — auto-selected; change manually if needed",
+      photoRoomNameLabel: "Room name",
+      photoRoomTypeLabel: "Room type",
+      photoZonesLabel: "Zones (editable)",
+      photoZonesLabelStatic: "Zones in this space",
+      photoAddZonePh: "Add zone…",
+      photoItemsLabel: "Recognized items (check to add)",
+      photoNoItems: "No recognizable items in this photo; you can still confirm to create the space",
+      photoZoneUnset: "Unspecified",
+      photoQtyPh: "Qty",
+      photoConfirm: "✅ Confirm & add",
+      photoCancel: "Cancel",
+      photoAnalyzing: "AI is recognizing the space and items…",
+      photoAdded: "Added {n} items to \"{name}\"",
+      photoRefNote: "Each space keeps its 3 most recent small photos as recognition reference, stored only on this device and never uploaded.",
+      photoDefaultRoom: "Unnamed room",
+      spacesGoPhoto: "Scan to add items",
       processText: "Parse with AI & save",
       processPhoto: "Recognize photo with AI & save",
       loadingParsing: "AI is parsing…",
-      loadingPhoto: "AI is identifying items in the photo…",
       historyTitle: "History",
       historyCount: "{n} entries",
       historyEmpty: "No input history yet",
@@ -1572,7 +1631,7 @@
       emptyState: "No records yet — try entering items or importing a file",
       jsonShow: "▾ Show raw JSON data",
       jsonHide: "▴ Hide raw JSON data",
-      footerHtml: "Voice and data are processed locally in your browser; refreshing the page clears records (back up via JSON export).<br>This tool uses the browser's built-in speech recognition + Claude AI semantic parsing, for technical validation only.",
+      footerHtml: "Items and data are processed locally in your browser (space reference photos stay on this device and are never uploaded). Refreshing clears unsynced records (enable cloud sync for backup).<br>This tool uses AI vision and semantic parsing, for personal home inventory use only.",
       reviewTitle: "Confirm recognized items",
       reviewSubtitle: "Found {n} items — please confirm or edit before adding to inventory",
       reviewCancel: "Cancel",
@@ -1602,9 +1661,6 @@
       searchNoData: "No inventory records yet — please add items first.",
       searchFail: "Search failed: ",
       searchNotFoundFallback: "No matching items found",
-      errNoSpeech: "Your browser does not support speech recognition. Please use Chrome or Safari (mobile Chrome, or desktop Chrome / Edge recommended).",
-      errSpeech: "Speech recognition error: ",
-      errPhotoEmpty: "AI could not identify any clear items in the photo. Try a different angle or a closer shot.",
       errTextEmpty: "AI could not parse any items from the content. Try describing it differently.",
       errParseFail: "Parse failed: ",
       errNoJson: "AI did not return valid JSON: ",
@@ -1648,29 +1704,12 @@
       optNoSpace: "— None —",
       spaceFilterAll: "All Spaces",
       spaceFilterLabel: "Space filter",
-      scanRoomCta: "Scan Room",
       scanManualLink: "Add room manually",
-      scanLoading: "AI is recognizing the room…",
-      scanRoomNameLabel: "Room name",
-      scanRoomTypeLabel: "Room type",
-      scanZonesLabel: "Detected zones",
-      scanAddZonePh: "Add zone…",
-      scanItemsLabel: "Visible items",
-      scanAddItemPh: "Add item…",
-      scanConfirmSpace: "Create Space",
-      scanCancel: "Cancel",
-      scanAddToReview: "Add to Review",
-      scanCreated: "✓ Created",
-      scanClose: "Close",
-      scanDefaultRoom: "Unnamed room",
-      scanSourceLabel: "(from room scan)",
-      scanErrEmpty: "AI couldn't recognize this room. Try another angle.",
-      scanNoItems: "No clearly visible items detected",
       cloudTitle: "☁️ Cloud Sync",
-      cloudDesc: "When enabled, every data change is automatically encrypted (AES-256) and uploaded to the cloud. The filename is a timestamp; others can read it with the filename + password. The password stays in this session's memory only and disappears when the page closes — it is never uploaded.",
+      cloudDesc: "When enabled, every data change is automatically encrypted (AES-256) and uploaded to the cloud. The filename is a timestamp; others can read it with the filename + password, or via a QR code / share link. You can link multiple cloud files and switch between them in the dropdown below; each file has its own password. The password stays in this session's memory only and disappears when the page closes — it is never uploaded.",
       cloudRestorePrompt: "A linked cloud file was found. Enter the password to restore your data from the cloud.",
       cloudRestoreBtn: "Restore from cloud",
-      cloudPwLabel: "Cloud password (min 8 chars, valid for this session only)",
+      cloudPwLabel: "Current file's cloud password (min 8 chars, this session only)",
       cloudPwPh: "Enter cloud password",
       cloudPwSet: "✓ Password set (kept in memory only)",
       cloudPwTooShort: "Password needs at least 8 characters",
@@ -1713,7 +1752,20 @@
       cloudFetchInfo: "Found: {n} items, {m} spaces (updated {time})",
       cloudFetchBind: "Load & link",
       cloudBindConfirm: "Loading will replace all current data and link this filename (future auto-syncs go to the same file). Continue?",
-      cloudCancel: "Cancel"
+      cloudCancel: "Cancel",
+      cloudShareTitle: "📤 Share this cloud file",
+      cloudShareQrBtn: "Generate share QR code",
+      cloudShareLinkBtn: "Copy share link",
+      cloudShareWarn: "⚠️ The QR code contains the password: anyone who scans it can read and decrypt this cloud file — only share with people you trust. The share link has no password; the other person must enter the password themselves.",
+      cloudShareNeedPw: "Set the cloud password for the current file first to generate a QR code with password",
+      cloudShareQrFail: "Failed to generate QR code",
+      cloudShareQrDone: "Share QR code for {file} generated (contains password)",
+      cloudShareLinkCopied: "Share link copied (no password)",
+      cloudShareGot: "Shared cloud file received: ",
+      cloudSwitchNeedPw: "Enter this file's cloud password",
+      cloudSwitched: "Switched to cloud file {file}",
+      cloudServerBtn: "🔍 Browse server files",
+      cloudServerEmpty: "No other unlinked files on the server"
     }
   };
 
@@ -1810,10 +1862,7 @@
     document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.getAttribute('data-i18n-title')); });
     const langToggle = document.getElementById('langToggle');
     if (langToggle) langToggle.textContent = lang === 'zh-TW' ? 'EN' : '中文';
-    // 動態提示字串（原本的 hints / textPlaceholders / textHints / statusIdle / statusRec /
     // searchPlaceholders / photoTitles / photoHints 全部收斂到這裡）
-    document.getElementById('micHint').textContent = t('micHint');
-    document.getElementById('micStatus').textContent = isRecording ? t('statusRec') : t('statusIdle');
     document.getElementById('textInput').placeholder = t('textPlaceholder');
     document.getElementById('textHintLabel').textContent = t('textHint');
     document.getElementById('searchInput').placeholder = t('searchPlaceholder');
@@ -1831,83 +1880,9 @@
     renderHistory();
     renderLog();
     renderSpaces();
-    if (typeof scanState !== 'undefined' && scanState) renderScanPreview();
     if (document.getElementById('reviewOverlay').classList.contains('show')) renderReviewQueue();
+    if (typeof renderPhotoPreview === 'function') renderPhotoPreview();
     if (typeof renderCloudSection === 'function') renderCloudSection();
-  }
-
-  function initRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      showError(t('errNoSpeech'));
-      document.getElementById('micBtn').disabled = true;
-      return null;
-    }
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = currentLang;
-
-    rec.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' ';
-        } else {
-          interim += transcript;
-        }
-      }
-      const box = document.getElementById('transcriptBox');
-      const text = document.getElementById('transcriptText');
-      box.classList.add('show');
-      text.innerHTML = finalTranscript + (interim ? `<span class="interim">${interim}</span>` : '');
-      document.getElementById('processBtn').disabled = finalTranscript.trim().length === 0;
-    };
-
-    rec.onerror = (event) => {
-      if (event.error === 'no-speech') return;
-      showError(t('errSpeech') + event.error);
-      stopRecording();
-    };
-
-    rec.onend = () => {
-      if (isRecording) rec.start(); // auto-restart for continuous listening
-    };
-
-    return rec;
-  }
-
-  function toggleRecording() {
-    if (!isRecording) {
-      startRecording();
-    } else {
-      stopRecording();
-    }
-  }
-
-  function startRecording() {
-    recognition = initRecognition();
-    if (!recognition) return;
-    recognition.lang = currentLang;
-    finalTranscript = '';
-    inputStartedAt = new Date().toISOString();
-    isRecording = true;
-    recognition.start();
-    document.getElementById('micBtn').classList.add('recording');
-    document.getElementById('micBtn').textContent = '⏹';
-    document.getElementById('micStatus').textContent = t('statusRec');
-    document.getElementById('waveform').classList.add('show');
-    document.getElementById('errorBox').classList.remove('show');
-  }
-
-  function stopRecording() {
-    isRecording = false;
-    if (recognition) recognition.stop();
-    document.getElementById('micBtn').classList.remove('recording');
-    document.getElementById('micBtn').textContent = '🎙️';
-    document.getElementById('micStatus').textContent = t('statusIdle');
-    document.getElementById('waveform').classList.remove('show');
   }
 
   function showError(msg) {
@@ -1918,23 +1893,18 @@
 
   async function processTranscript() {
     if (!hasApiKey()) { showApiKeyReminder(); return; }
-    const isPhotoMode = currentInputMode === 'photo';
-    const text = currentInputMode === 'text'
-      ? document.getElementById('textInput').value.trim()
-      : finalTranscript.trim();
+    // 拍照模式走新的「空間＋物品一次辨識」流程
+    if (currentInputMode === 'photo') { await runPhotoInventory(); return; }
 
-    if (isPhotoMode) {
-      if (!photoBase64) return;
-    } else if (!text) {
-      return;
-    }
+    const text = document.getElementById('textInput').value.trim();
+    if (!text) return;
 
     const btn = document.getElementById('processBtn');
     const loading = document.getElementById('loading');
     const loadingLabel = document.querySelector('#loading span');
     btn.disabled = true;
     loading.classList.add('show');
-    if (loadingLabel) loadingLabel.textContent = isPhotoMode ? t('loadingPhoto') : t('loadingParsing');
+    if (loadingLabel) loadingLabel.textContent = t('loadingParsing');
     document.getElementById('errorBox').classList.remove('show');
 
     // Capture timing before reset
@@ -1943,39 +1913,20 @@
 
     const entrySchema = buildEntrySchema();
 
-    const prompt = isPhotoMode
-      ? `你是一個家庭庫存視覺辨識 AI。使用者拍了一張櫃子、抽屜或收納空間的照片，請仔細辨識照片中所有清晰可見的物品。
+    const prompt = `你是一個家庭庫存文字解析 AI。使用者用文字描述他們整理家中物品的內容，可能包含位置代號、物品名稱、數量、備註。
 
 使用者語言：${t('promptLangName')}
 ${t('promptLangLine')}
-
-請以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記）：
-
-${entrySchema}
-
-規則：
-- location_id 留空字串（照片無法判斷位置代號，由使用者後續自行填寫或編輯）
-- location_label 可以根據照片內容簡短描述這是什麼空間或容器（例如「抽屜」、「層架」），若無法判斷則留空字串
-- 數量請盡量從照片中數出實際看到的個數，無法確定時才填 null
-- 只列出有把握辨識出的物品，模糊不清的不要硬猜
-- placed_at_raw 留空字串（照片無法判斷實際放入時間，除非包裝上清楚印有日期，可填入該日期文字）
-- 如果照片中完全沒有可辨識的物品，回傳 {"entries": []}`
-      : `你是一個家庭庫存語音解析 AI。使用者用口語描述他們整理家中物品的內容，可能包含位置代號、物品名稱、數量、備註。
-
-使用者語言：${t('promptLangName')}
-${t('promptLangLine')}
-原始語音轉文字內容：「${text}」
+使用者輸入內容：「${text}」
 
 請解析出其中提到的所有物品條目，以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記）：
 
 ${entrySchema}
 
-一句話可能包含多個物品，請全部拆解出來。請特別注意使用者是否提到「放入」「買的」「取得」相關的時間描述（例如「上禮拜」「今天」「上個月」「剛買的」），並填入 placed_at_raw 欄位，原樣保留使用者的口語描述即可，不需要換算成日期。如果語音內容完全沒有提到任何物品或位置資訊，回傳 {"entries": []}。`;
+一句話可能包含多個物品，請全部拆解出來。請特別注意使用者是否提到「放入」「買的」「取得」相關的時間描述（例如「上禮拜」「今天」「上個月」「剛買的」），並填入 placed_at_raw 欄位，原樣保留使用者的描述即可，不需要換算成日期。如果輸入內容完全沒有提到任何物品或位置資訊，回傳 {"entries": []}。`;
 
     try {
-      const rawText = isPhotoMode
-        ? await callAI(prompt, photoBase64, photoMime)
-        : await callAI(prompt);
+      const rawText = await callAI(prompt);
 
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error(t('errNoJson') + rawText);
@@ -1984,24 +1935,15 @@ ${entrySchema}
       const newEntries = parsed.entries || [];
 
       if (newEntries.length === 0) {
-        showError(isPhotoMode ? t('errPhotoEmpty') : t('errTextEmpty'));
+        showError(t('errTextEmpty'));
         return;
       }
 
-      openReviewQueue(
-        newEntries,
-        isPhotoMode ? t('photoSourceLabel') : text,
-        isPhotoMode ? 'photo' : currentInputMode,
-        { startedAt, submittedAt }
-      );
+      openReviewQueue(newEntries, text, 'text', { startedAt, submittedAt });
 
       // Reset input for next entry
-      finalTranscript = '';
       inputStartedAt = null;
-      document.getElementById('transcriptBox').classList.remove('show');
-      document.getElementById('transcriptText').innerHTML = '';
       document.getElementById('textInput').value = '';
-      if (isPhotoMode) clearPhoto();
       document.getElementById('processBtn').disabled = true;
 
     } catch (err) {
@@ -2009,7 +1951,6 @@ ${entrySchema}
     } finally {
       loading.classList.remove('show');
       btn.disabled = false;
-      if (isPhotoMode) clearPhoto();
       document.getElementById('processBtn').disabled = true;
     }
   }
@@ -2195,7 +2136,7 @@ ${entrySchema}
   }
 
   // ===== History =====
-  const sourceIcons = { voice: '🎙️', text: '⌨️', photo: '📷' };
+  const sourceIcons = { text: '⌨️', photo: '📷' };
 
   function toggleHistory() {
     const panel = document.getElementById('historyPanel');
@@ -2525,6 +2466,8 @@ ${t('promptLangLine')}`;
   }
 
   // ===== 空間（Spaces）CRUD + 渲染 =====
+  // space = { id, name, photo (dataURL JPEG 或 null), refPhotos: [dataURL…]（最近 3 張 400px 辨識基準照）,
+  //           zones: [{ id, name }] }
   function loadSpaces() {
     try {
       const saved = localStorage.getItem(SPACES_KEY);
@@ -2538,8 +2481,56 @@ ${t('promptLangLine')}`;
       id: s.id,
       name: s.name || '',
       photo: s.photo || null,
+      refPhotos: Array.isArray(s.refPhotos) ? s.refPhotos.filter(x => typeof x === 'string' && x.startsWith('data:image')).slice(0, 3) : [],
       zones: Array.isArray(s.zones) ? s.zones.filter(z => z && z.id).map(z => ({ id: z.id, name: z.name || '' })) : []
     }));
+    // 背景回填：舊空間有大圖但無基準照時，用大圖產生第一張 400px 基準（直接寫 localStorage，不經 saveSpaces 以免觸發雲端同步）
+    spaces.forEach(sp => {
+      if (sp.refPhotos.length === 0 && sp.photo) {
+        makeRefPhoto(sp.photo).then(small => {
+          sp.refPhotos = [small];
+          try { localStorage.setItem(SPACES_KEY, JSON.stringify(spaces)); } catch (e) { /* ignore */ }
+        }).catch(() => { /* ignore */ });
+      }
+    });
+  }
+
+  // 基準照：縮到最長邊 400px、JPEG 0.6（單張約 30-50KB，省 localStorage）
+  function makeRefPhoto(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const MAX = 400;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        } catch (e) { reject(e); }
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+
+  // 新照片滾動成為該空間的最新基準（保留最近 3 張）
+  function pushRefPhoto(space, newPhotoDataUrl) {
+    return makeRefPhoto(newPhotoDataUrl).then(small => {
+      space.refPhotos = [small, ...(space.refPhotos || [])].slice(0, 3);
+    });
+  }
+
+  // 區域名稱 → zoneId（比對時忽略前後空白）；找不到回傳空字串
+  function resolveZoneId(space, zoneName) {
+    if (!space || !zoneName) return '';
+    const zn = String(zoneName).trim();
+    const z = (space.zones || []).find(zz => String(zz.name).trim() === zn);
+    return z ? z.id : '';
   }
 
   function saveSpaces() {
@@ -2577,6 +2568,7 @@ ${t('promptLangLine')}`;
     } else {
       container.innerHTML = spaces.map(sp => {
         const itemCount = entries.filter(e => e.spaceId === sp.id).length;
+        const itemsHere = entries.filter(e => e.spaceId === sp.id);
         const zones = sp.zones || [];
         return `
         <div class="space-card">
@@ -2588,6 +2580,9 @@ ${t('promptLangLine')}`;
             </div>
             <button class="space-del" onclick="deleteSpace('${sp.id}')" title="${escapeAttr(t('btnDeleteSpace'))}">🗑️</button>
           </div>
+          ${itemsHere.length ? `<div class="space-items-row">${itemsHere.slice(0, 8).map(e =>
+            `<span class="space-item-chip">${escapeHtml(e.item)}${e.quantity ? ' ×' + escapeHtml(String(e.quantity)) : ''}</span>`
+          ).join('')}${itemsHere.length > 8 ? `<span class="space-item-more">+${itemsHere.length - 8}</span>` : ''}</div>` : ''}
           <div class="space-photo-row">
             <button class="log-btn" onclick="triggerSpacePhoto('${sp.id}')">${t(sp.photo ? 'btnChangePhoto' : 'btnUploadPhoto')}</button>
             ${sp.photo ? `<button class="log-btn" onclick="deleteSpacePhoto('${sp.id}')">${t('btnDeletePhoto')}</button>` : ''}
@@ -2613,7 +2608,7 @@ ${t('promptLangLine')}`;
     const input = document.getElementById('spaceNameInput');
     const name = input.value.trim();
     if (!name) return;
-    spaces.push({ id: uid('sp_'), name: name, photo: null, zones: [] });
+    spaces.push({ id: uid('sp_'), name: name, photo: null, refPhotos: [], zones: [] });
     input.value = '';
     saveSpaces();
     renderSpaces();
@@ -2695,254 +2690,359 @@ ${t('promptLangLine')}`;
     renderSpaces();
   }
 
-  // ===== 空間掃描：拍照 → AI 辨識空間 =====
-  // scanState = { photoDataUrl, photoBase64, roomName, roomType, zones: [],
-  //               visibleItems: [{name, checked}], spaceId, created, startedAt, submittedAt }
-  let scanState = null;
-
-  function triggerSpaceScan() {
-    if (!hasApiKey()) { showApiKeyReminder(); return; }
-    hideScanError();
-    document.getElementById('spaceScanInput').click();
-  }
 
   function toggleManualAddSpace() {
     const row = document.getElementById('manualAddRow');
     row.style.display = row.style.display === 'none' ? '' : 'none';
   }
 
-  function showScanError(msg) {
-    const box = document.getElementById('scanErrorBox');
-    box.textContent = msg;
-    box.classList.add('show');
-  }
-  function hideScanError() {
-    document.getElementById('scanErrorBox').classList.remove('show');
-  }
+  // ===== 拍照建檔：新照片＋各空間基準照 → AI 判斷空間＋辨識物品 → 預覽 → 直接入庫 =====
+  function buildPhotoPrompt(refSpaces) {
+    const refSection = refSpaces.length > 0
+      ? `第 2 張之後的照片是「既有空間的基準照片」，依序對應：
+${refSpaces.map((s, i) => `第 ${i + 2} 張照片 = 空間「${s.name}」（id: ${s.id}）`).join('\n')}`
+      : `（目前沒有任何既有空間的基準照片，只有第 1 張新照片）`;
+    return `你是一個家庭庫存視覺辨識 AI。
 
-  function handleSpaceScanSelect(event) {
-    const file = event.target.files[0];
-    event.target.value = '';
-    if (!file) return;
-    hideScanError();
-    // 沿用房間照片的壓縮規格：最長邊 800px、JPEG 0.7
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX = 800;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        runSpaceScan(dataUrl, dataUrl.split(',')[1]);
-      };
-      img.onerror = () => showScanError(t('scanErrEmpty'));
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
+【輸入照片】
+- 第 1 張是使用者剛拍的新照片。
+${refSection}
 
-  async function runSpaceScan(dataUrl, base64) {
-    const loading = document.getElementById('scanLoading');
-    const ctaBtn = document.getElementById('scanRoomBtn');
-    loading.classList.add('show');
-    ctaBtn.disabled = true;
-    document.getElementById('scanPreview').innerHTML = '';
-    scanState = null;
-    const submittedAt = new Date().toISOString();
+【任務】
+1. 判斷第 1 張新照片屬於哪一個既有空間（回傳該空間 id），或這是一個全新的空間（回傳 "new"）。
+2. 同時辨識新照片的房間資訊與清楚可見的物品。
 
-    const prompt = `你是一個家庭空間辨識 AI。使用者拍了一張房間的照片，請辨識這是什麼房間、有哪些家具或收納區域，並列出清楚可見的物品。
+【空間比對關鍵規則 — 全景 vs 局部特寫】
+- 基準照片與新照片的「構圖不需要相似」！新照片可能只是基準照片中某個角落的特寫（例如基準照片是整間廚房的全景，新照片是流理台或某個櫃子的近拍）→ 這仍然算同一個空間，絕對不能因為構圖、視角、距離不同就判成新空間。
+- 判斷依據是「材質、顏色、家具款式、物品特徵的連續性」，例如：同款櫥櫃把手、同一磁磚花色、同一張桌子的桌面紋理、同款收納盒、同樣的地板或牆面材質；而不是整體構圖或視角是否相似。
+- 只有當新照片中的材質、家具、物品特徵與「所有」基準照片都明顯無關時，才回傳 "new"。
+- 同時評估信心度 confidence：high（很有把握是同一空間，或很有把握是新空間）、medium（有疑似線索但不太確定）、low（幾乎無法判斷）。
+
+【房間與物品辨識】
+- roomName：簡短口語的房間名稱；roomType：客廳/臥室/廚房/書房/浴室/陽台/儲藏室等類型
+- zones：新照片中可見的主要家具或收納區域名稱（例如：流理台、衣櫃、書桌），最多 8 個
+- items：陣列，每項為 {"name": "物品名稱", "zone": "對應 zones 中的區域名稱（無法判斷則空字串）", "qty": 數量數字（數得出才填，否則 null）}
+- 只列出有把握辨識出的物品，模糊不清的不要硬猜；若完全沒有可辨識物品，items 回傳空陣列（此時仍要完成空間判斷）。
 
 使用者語言：${t('promptLangName')}
 ${t('promptLangLine')}
 
 請以 JSON 格式回應，結構如下（必須是合法 JSON，不要任何其他文字或 markdown 標記）：
 {
-  "roomName": "房間名稱，例如：客廳",
-  "roomType": "房間類型，例如：客廳/臥室/廚房/書房/浴室/陽台/儲藏室",
-  "zones": ["家具或區域名稱1", "家具或區域名稱2"],
-  "visibleItems": ["清楚可見的物品名稱1", "清楚可見的物品名稱2"]
-}
+  "spaceMatch": "<空間 id> 或 \\"new\\"",
+  "confidence": "high | medium | low",
+  "roomName": "房間名稱",
+  "roomType": "房間類型",
+  "zones": ["區域1", "區域2"],
+  "items": [{"name": "物品名稱", "zone": "區域名稱", "qty": 2}]
+}`;
+  }
 
-規則：
-- roomName 用簡短口語的房間名稱
-- zones 列出照片中可見的主要家具或收納區域（例如：沙發、電視櫃、書桌、衣櫃），最多 8 個，只列有把握的
-- visibleItems 只列清楚可見、能確定名稱的物品，模糊不清的不要硬猜；若無則回傳空陣列`;
+  async function runPhotoInventory() {
+    if (!hasApiKey()) { showApiKeyReminder(); return; }
+    if (!photoBase64) return;
+    const btn = document.getElementById('processBtn');
+    const loading = document.getElementById('loading');
+    const loadingLabel = document.querySelector('#loading span');
+    btn.disabled = true;
+    loading.classList.add('show');
+    if (loadingLabel) loadingLabel.textContent = t('photoAnalyzing');
+    document.getElementById('errorBox').classList.remove('show');
+    document.getElementById('photoInventoryPreview').innerHTML = '';
+    photoState = null;
+
+    const submittedAt = new Date().toISOString();
+    const startedAt = inputStartedAt || submittedAt;
+    // 沿用拍照上傳的壓縮規格（最長邊 1280px、JPEG 0.88）作為空間照片與基準照來源
+    const newPhotoDataUrl = document.getElementById('photoPreviewImg').src;
 
     try {
-      // 走既有 callAI：gemini 直連，其他供應商經代理（簽名不變）
-      const rawText = await callAI(prompt, base64, 'image/jpeg');
+      const refSpaces = spaces.filter(s => s.refPhotos && s.refPhotos.length > 0);
+      const images = [{ data: photoBase64, mime: 'image/jpeg' }];
+      refSpaces.forEach(s => {
+        const b64 = (s.refPhotos[0] || '').split(',')[1];
+        if (b64) images.push({ data: b64, mime: 'image/jpeg' });
+      });
+
+      const rawText = await callAI(buildPhotoPrompt(refSpaces), images);
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error(t('errNoJson') + rawText);
-      let parsed;
-      try { parsed = JSON.parse(jsonMatch[0]); }
-      catch (e) { throw new Error(t('errNoJson') + rawText); }
+      const parsed = JSON.parse(jsonMatch[0]);
 
       const str = v => (typeof v === 'string' ? v.trim() : '');
-      const rawName = str(parsed.roomName);
+      const validIds = new Set(refSpaces.map(s => s.id));
+      let spaceMatch = str(parsed.spaceMatch);
+      if (spaceMatch !== 'new' && !validIds.has(spaceMatch)) spaceMatch = 'new';
+      let confidence = str(parsed.confidence).toLowerCase();
+      if (['high', 'medium', 'low'].indexOf(confidence) === -1) confidence = 'medium';
+      const roomName = str(parsed.roomName);
       const roomType = str(parsed.roomType);
       const zones = Array.isArray(parsed.zones)
         ? parsed.zones.filter(z => typeof z === 'string').map(z => z.trim()).filter(Boolean).slice(0, 8)
         : [];
-      const visibleItems = Array.isArray(parsed.visibleItems)
-        ? parsed.visibleItems.filter(v => typeof v === 'string').map(v => v.trim()).filter(Boolean)
-            .map(name => ({ name, checked: true }))
+      const items = Array.isArray(parsed.items)
+        ? parsed.items.filter(it => it && typeof it === 'object').map(it => ({
+            name: str(it.name),
+            zoneName: str(it.zone),
+            zoneId: '',
+            qty: (it.qty === null || it.qty === undefined || it.qty === '') ? '' : Number(it.qty),
+            checked: true
+          })).filter(it => it.name).slice(0, 60)
         : [];
 
-      if (!rawName && !roomType && zones.length === 0 && visibleItems.length === 0) {
-        showScanError(t('scanErrEmpty'));
-        return;
+      // 預設選取：AI 判斷的空間；若判為新空間但房間名稱與既有空間完全相符，則自動選取該空間（附註說明）
+      let chosenSpaceId = spaceMatch;
+      let nameMatched = false;
+      if (spaceMatch === 'new' && roomName) {
+        const nm = spaces.find(s => s.name.trim() === roomName);
+        if (nm) { chosenSpaceId = nm.id; nameMatched = true; }
       }
+      const chosenSp = chosenSpaceId === 'new' ? null : findSpace(chosenSpaceId);
+      items.forEach(it => { it.zoneId = chosenSp ? resolveZoneId(chosenSp, it.zoneName) : ''; });
 
-      scanState = {
-        photoDataUrl: dataUrl, photoBase64: base64,
-        roomName: rawName || roomType || t('scanDefaultRoom'),
-        roomType, zones, visibleItems,
-        spaceId: null, created: false,
-        startedAt: submittedAt, submittedAt
+      photoState = {
+        newPhotoDataUrl, newPhotoBase64: photoBase64,
+        roomName: roomName || (matchSpaceName(spaceMatch) || ''),
+        roomType, zones, items,
+        matchSpaceId: spaceMatch, confidence, chosenSpaceId,
+        refThumb: spaceMatch === 'new' ? null : ((findSpace(spaceMatch) || {}).refPhotos || [])[0] || null,
+        nameMatched, startedAt, submittedAt
       };
-      renderScanPreview();
+      renderPhotoPreview();
     } catch (err) {
-      showScanError(err && err.message ? err.message : String(err));
+      showError(t('errParseFail') + (err && err.message ? err.message : String(err)));
     } finally {
       loading.classList.remove('show');
-      ctaBtn.disabled = false;
+      btn.disabled = false;
     }
   }
 
-  function renderScanPreview() {
-    const box = document.getElementById('scanPreview');
+  function matchSpaceName(spaceId) {
+    const sp = spaceId === 'new' ? null : findSpace(spaceId);
+    return sp ? sp.name : '';
+  }
+
+  function photoZoneOptions(st, it) {
+    const isNew = st.chosenSpaceId === 'new';
+    const unset = `<option value="">${escapeHtml(t('photoZoneUnset'))}</option>`;
+    if (isNew) {
+      return unset + st.zones.map(zn =>
+        `<option value="${escapeAttr(zn)}"${it.zoneName === zn ? ' selected' : ''}>${escapeHtml(zn)}</option>`).join('');
+    }
+    const sp = findSpace(st.chosenSpaceId);
+    const zones = sp ? sp.zones : [];
+    return unset + zones.map(z =>
+      `<option value="${z.id}"${it.zoneId === z.id ? ' selected' : ''}>${escapeHtml(z.name)}</option>`).join('');
+  }
+
+  function renderPhotoPreview() {
+    const box = document.getElementById('photoInventoryPreview');
     if (!box) return;
-    if (!scanState) { box.innerHTML = ''; return; }
-    const s = scanState;
+    const st = photoState;
+    if (!st) { box.innerHTML = ''; return; }
+    const isNew = st.chosenSpaceId === 'new';
+    const chosenSp = isNew ? null : findSpace(st.chosenSpaceId);
+    const matchSp = st.matchSpaceId === 'new' ? null : findSpace(st.matchSpaceId);
+    const unsure = st.confidence !== 'high';
+    const inputCss = 'flex:1;min-width:0;font:inherit;font-size:0.85rem;padding:0.35rem 0.5rem;border:1px solid var(--border);border-radius:6px;background:var(--soft);color:inherit;box-sizing:border-box;';
+
     box.innerHTML = `
     <div class="scan-preview">
-      ${s.created ? `<div class="scan-created-note">${t('scanCreated')}</div>` : ''}
-      <img class="scan-preview-photo" src="${s.photoDataUrl}" alt="">
+      <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;">
+        <figure style="margin:0;flex:1;min-width:0;">
+          <img class="scan-preview-photo" style="margin-bottom:0.25rem;" src="${st.newPhotoDataUrl}" alt="">
+          <figcaption style="font-size:0.72rem;color:var(--muted);text-align:center;">${escapeHtml(t('photoNewPhotoLabel'))}</figcaption>
+        </figure>
+        ${st.refThumb ? `<figure style="margin:0;flex:1;min-width:0;">
+          <img class="scan-preview-photo" style="margin-bottom:0.25rem;" src="${st.refThumb}" alt="">
+          <figcaption style="font-size:0.72rem;color:var(--muted);text-align:center;">${escapeHtml(t('photoRefLabel'))}</figcaption>
+        </figure>` : ''}
+      </div>
+      <div class="scan-created-note">${matchSp ? '🔍 ' + escapeHtml(t('photoMatchIs', { name: matchSp.name })) : '🆕 ' + escapeHtml(t('photoMatchNew'))}</div>
+      ${unsure ? `<div class="settings-note warn" style="margin-bottom:0.7rem;">⚠️ ${escapeHtml(t('photoMatchUnsure'))}</div>` : ''}
+      ${st.nameMatched && chosenSp ? `<div class="settings-note" style="margin-bottom:0.7rem;">${escapeHtml(t('photoNameMatchNote', { name: chosenSp.name }))}</div>` : ''}
       <div class="scan-field">
-        <label>${t('scanRoomNameLabel')}</label>
-        <input type="text" value="${escapeAttr(s.roomName)}" oninput="scanState.roomName=this.value"${s.created ? ' disabled' : ''}>
+        <label>${escapeHtml(t('photoChooseSpace'))}</label>
+        <select class="settings-input" style="width:100%;cursor:pointer;" onchange="onPhotoSpaceChoice(this.value)">
+          ${spaces.map(s => `<option value="${s.id}"${st.chosenSpaceId === s.id ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
+          <option value="new"${isNew ? ' selected' : ''}>${escapeHtml(t('photoOptNewSpace'))}</option>
+        </select>
+      </div>
+      ${isNew ? `
+      <div class="scan-field">
+        <label>${escapeHtml(t('photoRoomNameLabel'))}</label>
+        <input type="text" value="${escapeAttr(st.roomName)}" oninput="photoState.roomName=this.value">
       </div>
       <div class="scan-field">
-        <label>${t('scanRoomTypeLabel')}</label>
-        <input type="text" value="${escapeAttr(s.roomType)}" oninput="scanState.roomType=this.value"${s.created ? ' disabled' : ''}>
+        <label>${escapeHtml(t('photoRoomTypeLabel'))}</label>
+        <input type="text" value="${escapeAttr(st.roomType)}" oninput="photoState.roomType=this.value">
       </div>
       <div class="scan-field">
-        <label>${t('scanZonesLabel')}</label>
+        <label>${escapeHtml(t('photoZonesLabel'))}</label>
         <div class="scan-chips">
-          ${s.zones.map((z, i) => `<span class="scan-chip">${escapeHtml(z)}${s.created ? '' : `<button onclick="scanRemoveZone(${i})">✕</button>`}</span>`).join('')}
+          ${st.zones.map((z, i) => `<span class="scan-chip">${escapeHtml(z)}<button onclick="photoRemoveZone(${i})">✕</button></span>`).join('')}
         </div>
-        ${s.created ? '' : `<div class="scan-chip-add">
-          <input type="text" id="scanZoneInput" placeholder="${escapeAttr(t('scanAddZonePh'))}" onkeydown="if(event.key==='Enter')scanAddZone()">
-          <button class="log-btn" onclick="scanAddZone()">＋</button>
-        </div>`}
-      </div>
-      <div class="scan-field">
-        <label>${t('scanItemsLabel')}</label>
-        ${s.visibleItems.length === 0
-          ? `<div class="scan-empty-note">${t('scanNoItems')}</div>`
-          : s.visibleItems.map((it, i) => `
-            <div class="scan-item-row">
-              <input type="checkbox"${it.checked ? ' checked' : ''} onchange="scanState.visibleItems[${i}].checked=this.checked">
-              <span class="scan-item-name">${escapeHtml(it.name)}</span>
-              <button class="scan-item-del" onclick="scanRemoveItem(${i})">✕</button>
-            </div>`).join('')}
         <div class="scan-chip-add">
-          <input type="text" id="scanItemInput" placeholder="${escapeAttr(t('scanAddItemPh'))}" onkeydown="if(event.key==='Enter')scanAddItem()">
-          <button class="log-btn" onclick="scanAddItem()">＋</button>
+          <input type="text" id="photoZoneInput" placeholder="${escapeAttr(t('photoAddZonePh'))}" onkeydown="if(event.key==='Enter')photoAddZone()">
+          <button class="log-btn" onclick="photoAddZone()">＋</button>
         </div>
+      </div>` : `
+      <div class="scan-field">
+        <label>${escapeHtml(t('photoZonesLabelStatic'))}</label>
+        <div class="scan-chips">
+          ${(chosenSp ? chosenSp.zones : []).map(z => `<span class="scan-chip">${escapeHtml(z.name)}</span>`).join('') || `<span class="scan-empty-note">—</span>`}
+        </div>
+      </div>`}
+      <div class="scan-field">
+        <label>${escapeHtml(t('photoItemsLabel'))}</label>
+        ${st.items.length === 0
+          ? `<div class="scan-empty-note">${escapeHtml(t('photoNoItems'))}</div>`
+          : st.items.map((it, i) => `
+          <div class="scan-item-row">
+            <input type="checkbox"${it.checked ? ' checked' : ''} onchange="photoState.items[${i}].checked=this.checked">
+            <input type="text" style="${inputCss}" value="${escapeAttr(it.name)}" oninput="photoState.items[${i}].name=this.value">
+            <span style="color:var(--muted);">×</span>
+            <input type="number" min="0" style="width:3.2rem;${inputCss.replace('flex:1;min-width:0;', '')}" value="${escapeAttr(it.qty)}" placeholder="${escapeAttr(t('photoQtyPh'))}" oninput="photoState.items[${i}].qty=this.value">
+            <select class="settings-input" style="max-width:7rem;cursor:pointer;" onchange="onPhotoItemZone(${i}, this.value)">${photoZoneOptions(st, it)}</select>
+            <button class="scan-item-del" onclick="photoRemoveItem(${i})">✕</button>
+          </div>`).join('')}
       </div>
+      <div class="settings-note" style="margin-bottom:0.7rem;">${escapeHtml(t('photoRefNote'))}</div>
       <div class="scan-actions">
-        ${s.created
-          ? `<button class="scan-cancel" onclick="cancelScan()">${t('scanClose')}</button>`
-          : `<button class="scan-cancel" onclick="cancelScan()">${t('scanCancel')}</button>
-             <button class="scan-confirm" onclick="confirmCreateSpace()">${t('scanConfirmSpace')}</button>`}
-        ${s.visibleItems.length > 0 ? `<button class="scan-confirm" onclick="addScanItemsToReview()">${t('scanAddToReview')}</button>` : ''}
+        <button class="scan-cancel" onclick="cancelPhotoInventory()">${escapeHtml(t('photoCancel'))}</button>
+        <button class="scan-confirm" onclick="confirmPhotoInventory()"${photoConfirming ? ' disabled' : ''}>${escapeHtml(t('photoConfirm'))}</button>
       </div>
     </div>`;
   }
 
-  function scanRemoveZone(i) {
-    if (!scanState || scanState.created) return;
-    scanState.zones.splice(i, 1);
-    renderScanPreview();
-  }
-  function scanAddZone() {
-    if (!scanState || scanState.created) return;
-    const input = document.getElementById('scanZoneInput');
-    const name = input.value.trim();
-    if (!name || scanState.zones.length >= 8) return;
-    scanState.zones.push(name);
-    renderScanPreview();
-  }
-  function scanRemoveItem(i) {
-    if (!scanState) return;
-    scanState.visibleItems.splice(i, 1);
-    renderScanPreview();
-  }
-  function scanAddItem() {
-    if (!scanState) return;
-    const input = document.getElementById('scanItemInput');
-    const name = input.value.trim();
-    if (!name) return;
-    scanState.visibleItems.push({ name, checked: true });
-    renderScanPreview();
-  }
-  function cancelScan() {
-    scanState = null;
-    document.getElementById('scanPreview').innerHTML = '';
-    hideScanError();
+  let photoConfirming = false;
+
+  function onPhotoSpaceChoice(value) {
+    if (!photoState) return;
+    photoState.chosenSpaceId = value;
+    const sp = value === 'new' ? null : findSpace(value);
+    photoState.items.forEach(it => { it.zoneId = sp ? resolveZoneId(sp, it.zoneName) : ''; });
+    renderPhotoPreview();
   }
 
-  function confirmCreateSpace() {
-    if (!scanState || scanState.created) return;
-    const nameInput = document.querySelector('#scanPreview .scan-field input');
-    const name = (nameInput ? nameInput.value.trim() : scanState.roomName) || t('scanDefaultRoom');
-    const sp = {
-      id: uid('sp_'),
-      name: name,
-      photo: scanState.photoDataUrl,
-      zones: scanState.zones.map(z => ({ id: uid('z_'), name: z }))
-    };
-    spaces.push(sp);
-    saveSpaces();
-    scanState.spaceId = sp.id;
-    scanState.created = true;
-    scanState.roomName = name;
-    renderSpaces();
-    renderScanPreview();
+  function onPhotoItemZone(i, value) {
+    if (!photoState || !photoState.items[i]) return;
+    if (photoState.chosenSpaceId === 'new') photoState.items[i].zoneName = value;
+    else photoState.items[i].zoneId = value;
   }
 
-  function addScanItemsToReview() {
-    if (!scanState) return;
-    // 若空間還沒建立，先用預覽上的編輯內容建立
-    if (!scanState.created) confirmCreateSpace();
-    const picked = scanState.visibleItems.filter(it => it.checked && it.name.trim());
-    if (picked.length === 0) return;
-    const sp = findSpace(scanState.spaceId);
-    const roomName = sp ? sp.name : scanState.roomName;
-    const newEntries = picked.map(it => ({
-      location_id: '',
-      location_label: roomName,
-      item: it.name.trim(),
-      category: '',
-      quantity: '',
-      unit: '',
-      note: '',
-      placed_at_raw: '',
-      spaceId: scanState.spaceId || '',
-      zoneId: ''
-    }));
-    openReviewQueue(newEntries, t('scanSourceLabel'), 'photo',
-      { startedAt: scanState.startedAt, submittedAt: scanState.submittedAt });
+  function photoAddZone() {
+    if (!photoState || photoState.chosenSpaceId !== 'new') return;
+    const input = document.getElementById('photoZoneInput');
+    const name = input.value.trim();
+    if (!name || photoState.zones.length >= 8) return;
+    photoState.zones.push(name);
+    renderPhotoPreview();
   }
+  function photoRemoveZone(i) {
+    if (!photoState || photoState.chosenSpaceId !== 'new') return;
+    photoState.zones.splice(i, 1);
+    renderPhotoPreview();
+  }
+  function photoRemoveItem(i) {
+    if (!photoState) return;
+    photoState.items.splice(i, 1);
+    renderPhotoPreview();
+  }
+
+  function cancelPhotoInventory() {
+    photoState = null;
+    const box = document.getElementById('photoInventoryPreview');
+    if (box) box.innerHTML = '';
+    clearPhoto();
+  }
+
+  async function confirmPhotoInventory() {
+    const st = photoState;
+    if (!st || photoConfirming) return;
+    photoConfirming = true;
+    renderPhotoPreview();
+    try {
+      // 1. 解析空間：新建或併入既有
+      let sp = st.chosenSpaceId === 'new' ? null : findSpace(st.chosenSpaceId);
+      const isNew = !sp;
+      if (isNew) {
+        const name = (st.roomName || '').trim() || t('photoDefaultRoom');
+        const zoneNames = [...new Set(st.zones.map(z => z.trim()).filter(Boolean))].slice(0, 8);
+        sp = {
+          id: uid('sp_'),
+          name: name,
+          photo: st.newPhotoDataUrl,
+          refPhotos: [],
+          zones: zoneNames.map(zn => ({ id: uid('z_'), name: zn }))
+        };
+        spaces.push(sp);
+      } else {
+        // 既有空間：補上 AI 辨識到但空間尚無的區域（同名不重複新增）
+        const existingNames = new Set(sp.zones.map(z => String(z.name).trim()));
+        [...new Set(st.zones.map(z => z.trim()).filter(Boolean))].slice(0, 8).forEach(zn => {
+          if (!existingNames.has(zn)) {
+            sp.zones.push({ id: uid('z_'), name: zn });
+            existingNames.add(zn);
+          }
+        });
+      }
+      const spaceId = sp.id;
+      // 2. 新照片滾動成為該空間的最新基準（保留最近 3 張）
+      try { await pushRefPhoto(sp, st.newPhotoDataUrl); } catch (e) { /* ignore */ }
+      saveSpaces(); // → markCloudDirty（空間變更）
+      // 3. 勾選物品直接寫入 entries（inventory）
+      const now = new Date().toISOString();
+      const finalized = st.items
+        .filter(it => it.checked && it.name && it.name.trim())
+        .map(it => {
+          // 保留預覽時手動選擇的 zoneId；未指定者依區域名稱重新解析（新建/補齊的區域）
+          let zoneId = it.zoneId || '';
+          if (!zoneId && it.zoneName) zoneId = resolveZoneId(sp, it.zoneName);
+          const label = spaceLabel(spaceId, zoneId) || sp.name;
+          return {
+            location_id: '',
+            location_label: label, // 「房間 › 區域」
+            item: it.name.trim(),
+            category: '',
+            quantity: it.qty === '' ? null : Number(it.qty),
+            unit: '',
+            note: '',
+            placed_at_raw: '',
+            spaceId: spaceId,
+            zoneId: zoneId,
+            input_started_at: st.startedAt,
+            submitted_at: st.submittedAt,
+            confirmed_at: now,
+            timestamp: now,
+            raw_transcript: t('photoSourceLabel')
+          };
+        });
+      finalized.forEach(e => entries.push(e));
+      markCloudDirty(); // 物品新增 → 雲端同步排程
+      if (finalized.length > 0) {
+        historyLog.unshift({
+          id: 'h_' + Date.now(),
+          timestamp: now,
+          source: 'photo',
+          sourceLabel: t('photoSourceLabel'),
+          items: finalized,
+          undone: false
+        });
+      }
+      renderLog();
+      renderHistory();
+      renderSpaces();
+      // 4. 顯示成功訊息並重置
+      photoState = null;
+      clearPhoto();
+      const box = document.getElementById('photoInventoryPreview');
+      if (box) box.innerHTML = `<div class="scan-preview"><div class="scan-created-note">✅ ${escapeHtml(t('photoAdded', { n: finalized.length, name: sp.name }))}</div></div>`;
+    } finally {
+      photoConfirming = false;
+    }
+  }
+
 
   // 記錄 Tab 的空間篩選
   function renderSpaceFilter() {
@@ -2975,13 +3075,15 @@ ${t('promptLangLine')}
 
   // ===== 雲端同步（Cloud Sync）+ Time Machine 版本歷史 =====
   // 伺服器：Google Apps Script（HomeBase Cloud），檔名須符合 /^\d{14,20}\.json$/
-  // 隱私：密碼只存放在記憶體變數 cloudPassword，絕不寫入 localStorage；上傳前先用 AES-256-GCM 加密
+  // 隱私：密碼只存放在記憶體物件 cloudPwMap（per-file），絕不寫入 localStorage；上傳前先用 AES-256-GCM 加密
   const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzu_inZqgM8nMDKJaWjGr9WqXiMPylihpfazRz_MfSeLhXJBTpwmIwgbc5FWSzYja4Ttg/exec';
   const CLOUD_FILE_KEY = 'homebase_cloud_file';
   const CLOUD_FREQ_KEY = 'homebase_cloud_freq';
+  const CLOUD_FILES_KEY = 'homebase_cloud_files'; // 已綁定檔名陣列（只存檔名，密碼絕不存）
   const CLOUD_FILE_RE = /^\d{14,20}\.json$/;
+  const CLOUD_SHARE_BASE = 'https://hebe2234.github.io/homebase/';
 
-  let cloudPassword = null; // 只存記憶體！絕不寫 localStorage
+  let cloudPwMap = {}; // { filename: password } 每個雲端檔各自的 session 密碼，只存記憶體！
   let cloudDirty = false;
   let cloudSyncTimer = null; // 即時模式 debounce
   let cloudInterval = null;  // 15分/小時排程
@@ -3009,16 +3111,97 @@ ${t('promptLangLine')}
     if (!f) {
       f = cloudGenFilename();
       try { localStorage.setItem(CLOUD_FILE_KEY, f); } catch (e) { /* ignore */ }
+      cloudAddBoundFile(f); // 首次建檔即綁定
     }
-    updateCloudFileDisplay();
+    updateCloudFileSelect();
     return f;
   }
-  function updateCloudFileDisplay() {
-    const el = document.getElementById('cloudFileName');
-    if (!el) return;
-    const f = cloudPeekFilename();
-    el.value = f || '';
-    el.placeholder = f ? '' : t('cloudFileNotYet');
+  // ---------- 已綁定檔名清單（localStorage，只存檔名） ----------
+  function cloudGetBoundFiles() {
+    try {
+      const a = JSON.parse(localStorage.getItem(CLOUD_FILES_KEY));
+      return Array.isArray(a) ? a.filter(f => typeof f === 'string' && CLOUD_FILE_RE.test(f)) : [];
+    } catch (e) { return []; }
+  }
+  function cloudSetBoundFiles(arr) {
+    try { localStorage.setItem(CLOUD_FILES_KEY, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+  }
+  function cloudAddBoundFile(f) {
+    if (!f || !CLOUD_FILE_RE.test(f)) return;
+    const a = cloudGetBoundFiles();
+    if (a.indexOf(f) === -1) { a.push(f); cloudSetBoundFiles(a); }
+    updateCloudFileSelect();
+  }
+  function cloudMigrateBoundFiles() {
+    const cur = cloudPeekFilename();
+    if (cur) cloudAddBoundFile(cur);
+  }
+  function updateCloudFileSelect() {
+    const sel = document.getElementById('cloudFileSelect');
+    if (!sel) return;
+    const bound = cloudGetBoundFiles();
+    const cur = cloudPeekFilename();
+    sel.innerHTML = '';
+    if (bound.length === 0) {
+      const o = document.createElement('option');
+      o.value = '';
+      o.textContent = t('cloudFileNotYet');
+      sel.appendChild(o);
+    } else {
+      bound.forEach(f => {
+        const o = document.createElement('option');
+        o.value = f;
+        o.textContent = f;
+        if (f === cur) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+  }
+  // ---------- 切換目前雲端檔 ----------
+  async function onCloudFileSwitch() {
+    const sel = document.getElementById('cloudFileSelect');
+    if (!sel) return;
+    const next = sel.value;
+    const cur = cloudPeekFilename();
+    if (!next || next === cur) { updateCloudFileSelect(); return; }
+    // 切換前先把舊檔的未同步變更送上去，避免丟資料
+    if (cloudDirty && cloudGetPassword(cur)) { await cloudDoSync(true); }
+    cloudSetCurrentFile(next);
+  }
+  function cloudSetCurrentFile(next) {
+    const hb = document.getElementById('cloudHistoryBox');
+    const historyWasOpen = !!(hb && hb.style.display !== 'none');
+    try { localStorage.setItem(CLOUD_FILE_KEY, next); } catch (e) { /* ignore */ }
+    cloudDirty = false;
+    cloudVersionCache = null;
+    if (hb) { hb.style.display = 'none'; hb.innerHTML = ''; }
+    const sb = document.getElementById('cloudServerListBox');
+    if (sb) { sb.style.display = 'none'; sb.innerHTML = ''; }
+    const qb = document.getElementById('cloudShareQrBox');
+    if (qb) qb.innerHTML = '';
+    // 若分享卡針對的正是這個檔，切換過去後卡片已無用處
+    const shareCard = document.getElementById('cloudShareCard');
+    if (shareCard && shareCard.style.display !== 'none') {
+      const sf = document.getElementById('cloudShareFileName').textContent.trim();
+      if (sf === next) cloudDismissShareCard();
+    }
+    updateCloudFileSelect();
+    cloudCheckRestoreCard();
+    // 新檔的密碼另計：清空密碼欄並提示
+    const pwInput = document.getElementById('cloudPwInput');
+    if (pwInput) pwInput.value = '';
+    onCloudPwInput();
+    const ps = document.getElementById('cloudPwStatus');
+    if (ps) ps.textContent = cloudGetPassword(next) ? t('cloudPwSet') : '';
+    const freqSel = document.getElementById('cloudFreqSelect');
+    if (freqSel) freqSel.value = cloudGetFreq();
+    if (cloudGetPassword(next)) {
+      cloudSetStatus(t('cloudSwitched', { file: next }));
+    } else {
+      cloudSetStatus(t('cloudSwitchNeedPw'));
+      try { if (pwInput) pwInput.focus(); } catch (e) { /* ignore */ }
+    }
+    if (historyWasOpen) cloudShowHistory(); // 歷史區原本開著 → 重繪新檔的歷史
   }
   function copyCloudFileName() {
     const f = cloudPeekFilename();
@@ -3069,16 +3252,26 @@ ${t('promptLangLine')}
     cloudSyncTimer = setTimeout(() => { cloudSyncTimer = null; cloudDoSync(false); }, 5000);
   }
 
-  // ---------- 密碼（只存記憶體） ----------
+  // ---------- 密碼（只存記憶體，per-file） ----------
+  // 取得指定檔（預設目前檔）的 session 密碼。
+  // 若該檔尚無綁定密碼，退回讀密碼欄內容（涵蓋「先輸密碼、首次同步才建檔」的情境）。
+  function cloudGetPassword(filename) {
+    const f = filename || cloudPeekFilename();
+    if (f && cloudPwMap[f]) return cloudPwMap[f];
+    const inp = document.getElementById('cloudPwInput');
+    const v = inp ? inp.value : '';
+    return (v && v.length >= 8) ? v : null;
+  }
   function onCloudPwInput() {
     const v = document.getElementById('cloudPwInput').value;
     const st = document.getElementById('cloudPwStatus');
+    const f = cloudPeekFilename();
     if (v && v.length >= 8) {
-      cloudPassword = v;
+      if (f) cloudPwMap[f] = v; // 只存記憶體，絕不寫 localStorage；各檔密碼互相隔離
       if (st) st.textContent = t('cloudPwSet');
       cloudSetError('');
     } else {
-      cloudPassword = null;
+      if (f) delete cloudPwMap[f];
       if (st) st.textContent = v ? t('cloudPwTooShort') : '';
     }
   }
@@ -3188,19 +3381,21 @@ ${t('promptLangLine')}
   }
 
   async function cloudSyncNow() {
-    if (!cloudPassword) { cloudSetError(t('cloudNeedPw')); switchTab('settings'); return; }
+    if (!cloudGetPassword()) { cloudSetError(t('cloudNeedPw')); switchTab('settings'); return; }
     await cloudDoSync(true);
   }
   async function cloudDoSync(force) {
     if (cloudSyncing) return;
     if (!force && !cloudDirty) return;
-    if (!cloudPassword) { cloudSetError(t('cloudNeedPw')); return; } // inline 提示，不彈 modal
+    const pw = cloudGetPassword();
+    if (!pw) { cloudSetError(t('cloudNeedPw')); return; } // inline 提示，不彈 modal
     cloudSyncing = true;
     cloudSetError('');
     cloudSetStatus(t('cloudSyncing'));
     try {
       const filename = cloudEnsureFilename();
-      const data = await cloudEncrypt(cloudPassword, cloudBuildPayload());
+      if (!cloudPwMap[filename]) cloudPwMap[filename] = pw; // 首次建檔時把密碼欄的密碼綁到新檔
+      const data = await cloudEncrypt(pw, cloudBuildPayload());
       const j = await cloudFetch(CLOUD_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -3261,14 +3456,15 @@ ${t('promptLangLine')}
   async function cloudPreviewVersion(version) {
     const box = document.getElementById('cloudHistoryBox');
     if (!box) return;
-    if (!cloudPassword) { cloudSetError(t('cloudNeedPw')); return; }
+    const filename = cloudPeekFilename();
+    const pw = cloudGetPassword(filename);
+    if (!pw) { cloudSetError(t('cloudNeedPw')); return; }
     box.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
     try {
-      const filename = cloudPeekFilename();
       const j = await cloudFetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename) +
         '&version=' + encodeURIComponent(version));
       if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
-      const payload = await cloudDecrypt(cloudPassword, j.data);
+      const payload = await cloudDecrypt(pw, j.data);
       cloudVersionCache = { version: version, filename: filename, payload: payload };
       const nE = Array.isArray(payload.entries) ? payload.entries.length : 0;
       const nS = Array.isArray(payload.spaces) ? payload.spaces.length : 0;
@@ -3289,7 +3485,7 @@ ${t('promptLangLine')}
     if (!cloudVersionCache) return;
     if (!confirm(t('cloudRestoreConfirm'))) return;
     // 還原前先把當前狀態同步上去，避免弄丟
-    if (cloudDirty && cloudPassword) { await cloudDoSync(true); }
+    if (cloudDirty && cloudGetPassword()) { await cloudDoSync(true); }
     const p = cloudVersionCache.payload;
     entries = Array.isArray(p.entries) ? p.entries : [];
     spaces = Array.isArray(p.spaces) ? p.spaces : [];
@@ -3301,6 +3497,52 @@ ${t('promptLangLine')}
     cloudVersionCache = null;
     document.getElementById('cloudHistoryBox').style.display = 'none';
     await cloudDoSync(true); // 還原本身成為一個新版本
+  }
+
+  // ---------- 下載→解密→套用→綁定（共用流程） ----------
+  function cloudApplyPayload(payload) {
+    entries = Array.isArray(payload.entries) ? payload.entries : [];
+    spaces = Array.isArray(payload.spaces) ? payload.spaces : [];
+    saveSpaces(); // 內含 markCloudDirty；綁定成功後會再把 dirty 清掉
+    expandedGroups.clear();
+    renderLog();
+    renderHistory();
+    renderSpaces();
+  }
+  // filename + pw → 下載→解密→載入→綁定；成功回傳 true。密碼只進記憶體 cloudPwMap。
+  async function cloudBindLoadedFile(filename, pw) {
+    if (!CLOUD_FILE_RE.test(filename)) { cloudSetError(t('cloudErrBadName')); return false; }
+    if (!pw || pw.length < 8) { cloudSetError(t('cloudErrPwShort')); return false; }
+    cloudSetError('');
+    cloudSetStatus(t('cloudSyncing'));
+    try {
+      const j = await cloudFetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
+      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrNotFound'));
+      const payload = await cloudDecrypt(pw, j.data);
+      cloudApplyPayload(payload);
+      try { localStorage.setItem(CLOUD_FILE_KEY, filename); } catch (e) { /* ignore */ }
+      cloudAddBoundFile(filename);
+      cloudPwMap[filename] = pw; // 只存記憶體
+      const pwInput = document.getElementById('cloudPwInput');
+      if (pwInput) { pwInput.value = pw; onCloudPwInput(); }
+      cloudDirty = false; // 資料來自雲端本身，不需再上傳
+      cloudLastSync = j.updated;
+      cloudVersionCache = null;
+      updateCloudFileSelect();
+      cloudCheckRestoreCard();
+      // 若分享卡針對的正是這個檔，綁定成功後關掉它
+      const shareCard = document.getElementById('cloudShareCard');
+      if (shareCard && shareCard.style.display !== 'none' &&
+          document.getElementById('cloudShareFileName').textContent.trim() === filename) {
+        cloudDismissShareCard();
+      }
+      cloudSetStatus(t('cloudRestoreOk', { time: cloudFmtTime(j.updated) }));
+      return true;
+    } catch (err) {
+      cloudSetStatus('');
+      cloudSetError(err.message || t('cloudErrNotFound'));
+      return false;
+    }
   }
 
   // ---------- 讀取他人的雲端資料 ----------
@@ -3334,27 +3576,112 @@ ${t('promptLangLine')}
   function cloudBindFetch() {
     if (!cloudFetchCache) return;
     if (!confirm(t('cloudBindConfirm'))) return;
-    const payload = cloudFetchCache.payload;
     const filename = cloudFetchCache.filename;
-    entries = Array.isArray(payload.entries) ? payload.entries : [];
-    spaces = Array.isArray(payload.spaces) ? payload.spaces : [];
-    saveSpaces(); // 內含 markCloudDirty
-    expandedGroups.clear();
-    renderLog();
-    renderHistory();
-    renderSpaces();
-    try { localStorage.setItem(CLOUD_FILE_KEY, filename); } catch (e) { /* ignore */ }
-    // 綁定後沿用對方密碼作為本次 session 的雲端密碼，之後自動同步寫到同一個檔
+    const payload = cloudFetchCache.payload;
     const pw = document.getElementById('cloudFetchPw').value;
+    cloudApplyPayload(payload);
+    try { localStorage.setItem(CLOUD_FILE_KEY, filename); } catch (e) { /* ignore */ }
+    cloudAddBoundFile(filename);
+    cloudPwMap[filename] = pw; // 綁定後沿用對方密碼作為此檔的 session 密碼
     document.getElementById('cloudPwInput').value = pw;
     onCloudPwInput();
     document.getElementById('cloudFetchPw').value = '';
     document.getElementById('cloudFetchFile').value = '';
     document.getElementById('cloudFetchPreview').style.display = 'none';
     cloudFetchCache = null;
-    updateCloudFileDisplay();
+    cloudDirty = false;
+    updateCloudFileSelect();
     cloudCheckRestoreCard();
-    markCloudDirty();
+  }
+
+  // ---------- 瀏覽伺服器檔案 ----------
+  async function cloudBrowseServer() {
+    const box = document.getElementById('cloudServerListBox');
+    if (!box) return;
+    if (box.style.display !== 'none') { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'block';
+    box.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
+    try {
+      const j = await cloudFetch(CLOUD_URL + '?action=list');
+      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
+      const bound = cloudGetBoundFiles();
+      const files = (j.files || [])
+        .map(f => ({ name: f.name || f.filename, updated: f.updated || f.modifiedTime || f.modified || '', size: f.size }))
+        .filter(f => f.name && bound.indexOf(f.name) === -1);
+      if (files.length === 0) {
+        box.innerHTML = `<div class="settings-note">${t('cloudServerEmpty')}</div>`;
+        return;
+      }
+      box.innerHTML = files.map(f => `
+        <div class="history-entry">
+          <div class="history-entry-top">
+            <span class="history-entry-icon">☁️</span>
+            <span class="history-entry-time" style="font-family:monospace; word-break:break-all">${escapeHtml(f.name)}</span>
+            <span class="history-entry-count">${escapeHtml(f.updated ? cloudFmtTime(f.updated) : (f.size != null ? cloudFmtSize(f.size) : ''))}</span>
+          </div>
+          <div class="history-entry-actions">
+            <button class="log-btn" onclick="cloudBindServerFile('${escapeHtml(f.name)}')">${t('cloudFetchBind')}</button>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      box.innerHTML = `<div class="settings-note warn">${escapeHtml(t('cloudErrHistory'))}：${escapeHtml(err.message || '')}</div>`;
+    }
+  }
+  function cloudBindServerFile(name) {
+    const fi = document.getElementById('cloudFetchFile');
+    const pw = document.getElementById('cloudFetchPw');
+    if (fi) fi.value = name;
+    cloudSetError('');
+    if (pw) pw.focus();
+    const anchor = document.getElementById('cloudFetchPreview');
+    if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // ---------- 分享（QR Code / 連結） ----------
+  function cloudShareLink(includePw) {
+    const f = cloudPeekFilename();
+    if (!f) return null;
+    let u = CLOUD_SHARE_BASE + '?cloud=' + encodeURIComponent(f);
+    if (includePw) {
+      const pw = cloudGetPassword(f);
+      if (!pw) return null;
+      u += '&pw=' + encodeURIComponent(pw);
+    }
+    return u;
+  }
+  function cloudShareQR() {
+    const box = document.getElementById('cloudShareQrBox');
+    if (!box) return;
+    cloudSetError('');
+    const f = cloudPeekFilename();
+    if (!f) { cloudSetError(t('cloudNoFile')); return; }
+    const url = cloudShareLink(true);
+    if (!url) {
+      cloudSetError(t('cloudShareNeedPw'));
+      const pi = document.getElementById('cloudPwInput');
+      if (pi) pi.focus();
+      return;
+    }
+    try {
+      const qr = qrcode(0, 'M'); // typeNumber 0 = 自動選擇版本
+      qr.addData(url);
+      qr.make();
+      box.innerHTML =
+        `<div class="settings-note">${escapeHtml(t('cloudShareQrDone', { file: f }))}</div>` +
+        qr.createSvgTag({ scalable: true });
+    } catch (err) {
+      cloudSetError(t('cloudShareQrFail'));
+    }
+  }
+  function cloudShareLinkCopy() {
+    const f = cloudPeekFilename();
+    if (!f) { cloudSetError(t('cloudNoFile')); return; }
+    cloudSetError('');
+    const url = cloudShareLink(false);
+    const done = () => cloudSetStatus(t('cloudShareLinkCopied'));
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(() => cloudFallbackCopy(url, done));
+    } else cloudFallbackCopy(url, done);
   }
 
   // ---------- 啟動還原卡 ----------
@@ -3368,40 +3695,58 @@ ${t('promptLangLine')}
     if (!pw || pw.length < 8) { cloudSetError(t('cloudErrPwShort')); return; }
     const filename = cloudPeekFilename();
     if (!filename) return;
-    cloudSetError('');
-    cloudSetStatus(t('cloudSyncing'));
+    await cloudBindLoadedFile(filename, pw);
+    document.getElementById('cloudRestorePw').value = '';
+  }
+
+  // ---------- 分享連結（?cloud=檔名&pw=密碼） ----------
+  function cloudHandleShareLink() {
+    let cloud = null, pw = '';
     try {
-      const j = await cloudFetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
-      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrNotFound'));
-      const payload = await cloudDecrypt(pw, j.data);
-      entries = Array.isArray(payload.entries) ? payload.entries : [];
-      spaces = Array.isArray(payload.spaces) ? payload.spaces : [];
-      saveSpaces();
-      expandedGroups.clear();
-      renderLog();
-      renderHistory();
-      renderSpaces();
-      cloudPassword = pw;
-      document.getElementById('cloudPwInput').value = pw;
-      onCloudPwInput();
-      document.getElementById('cloudRestorePw').value = '';
+      const sp = new URLSearchParams(location.search);
+      cloud = sp.get('cloud');
+      pw = sp.get('pw') || '';
+    } catch (e) { /* ignore */ }
+    if (!cloud || !CLOUD_FILE_RE.test(cloud)) return;
+    // 先清掉 query，避免密碼留在網址列
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* ignore */ }
+    const alreadyBound = cloudGetBoundFiles().indexOf(cloud) !== -1;
+    cloudAddBoundFile(cloud);
+    if (pw && pw.length >= 8 && !cloudPwMap[cloud]) cloudPwMap[cloud] = pw; // QR 帶的密碼只進記憶體
+    if (cloud === cloudPeekFilename()) {
+      const pi = document.getElementById('cloudPwInput');
+      if (pi && cloudPwMap[cloud] && !pi.value) { pi.value = cloudPwMap[cloud]; onCloudPwInput(); }
       cloudCheckRestoreCard();
-      cloudDirty = false;
-      cloudLastSync = j.updated;
-      cloudSetStatus(t('cloudRestoreOk', { time: cloudFmtTime(j.updated) }));
-    } catch (err) {
-      cloudSetStatus('');
-      cloudSetError(err.message || t('cloudErrNotFound'));
+      return;
     }
+    if (alreadyBound) { cloudSetCurrentFile(cloud); return; } // 已綁定 → 直接切換過去
+    const card = document.getElementById('cloudShareCard');
+    if (!card) { cloudSetCurrentFile(cloud); return; }
+    document.getElementById('cloudShareFileName').textContent = cloud;
+    const spi = document.getElementById('cloudSharePw');
+    if (spi) spi.value = (pw && pw.length >= 8) ? pw : '';
+    card.style.display = 'block';
+    cloudCheckRestoreCard();
+  }
+  async function cloudBindSharedLink() {
+    const filename = document.getElementById('cloudShareFileName').textContent.trim();
+    const pw = document.getElementById('cloudSharePw').value;
+    await cloudBindLoadedFile(filename, pw); // 成功時內部會關掉分享卡
+  }
+  function cloudDismissShareCard() {
+    const card = document.getElementById('cloudShareCard');
+    if (card) card.style.display = 'none';
+    const spi = document.getElementById('cloudSharePw');
+    if (spi) spi.value = '';
   }
 
   // 語言切換時重繪雲端區動態內容（靜態 data-i18n 由 applyLang 統一處理）
   function renderCloudSection() {
-    updateCloudFileDisplay();
+    updateCloudFileSelect();
     const sel = document.getElementById('cloudFreqSelect');
     if (sel) sel.value = cloudGetFreq();
     const ps = document.getElementById('cloudPwStatus');
-    if (ps) ps.textContent = cloudPassword ? t('cloudPwSet') : '';
+    if (ps) ps.textContent = cloudGetPassword() ? t('cloudPwSet') : '';
     cloudSetStatus(cloudLastSync ? t('cloudSyncOk', { time: cloudFmtTime(cloudLastSync) }) : '');
     cloudCheckRestoreCard();
     const box = document.getElementById('cloudHistoryBox');
@@ -3415,13 +3760,14 @@ ${t('promptLangLine')}
   document.addEventListener('DOMContentLoaded', () => {
     loadSpaces();
     applyLang(detectLang());
-    initRecognition();
     loadSettings();
     // 雲端同步初始化
     document.getElementById('cloudFreqSelect').value = cloudGetFreq();
     cloudSetupScheduler();
-    updateCloudFileDisplay();
+    cloudMigrateBoundFiles(); // 舊版單檔 → 加入綁定清單
+    updateCloudFileSelect();
     cloudCheckRestoreCard();
+    cloudHandleShareLink(); // 處理 ?cloud= / ?pw= 分享連結
     if (!hasApiKey()) showApiKeyReminder();
   });
 </script>
