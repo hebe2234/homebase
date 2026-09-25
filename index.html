@@ -874,6 +874,69 @@
     </div>
   </div>
 
+  <div class="settings-section">
+    <div class="settings-section-title" data-i18n="cloudTitle">☁️ 雲端同步</div>
+    <div class="settings-note" data-i18n="cloudDesc">
+      開啟後，每次資料變更都會自動把物品＋空間加密（AES-256）上傳到雲端，檔名為時間戳，他人輸入檔名＋密碼即可讀取。密碼只留存在本次開啟的記憶體中，關閉頁面即消失，不會上傳。
+    </div>
+
+    <div class="settings-note warn" id="cloudRestoreCard" style="display:none">
+      <div data-i18n="cloudRestorePrompt">偵測到已綁定的雲端檔名，輸入密碼即可從雲端還原資料。</div>
+      <div class="settings-field" style="margin:0.5rem 0">
+        <input type="password" class="settings-input" id="cloudRestorePw" data-i18n-placeholder="cloudPwPh" placeholder="輸入雲端密碼">
+      </div>
+      <div class="settings-actions">
+        <button class="log-btn" onclick="cloudRestoreFromServer()" data-i18n="cloudRestoreBtn">從雲端還原</button>
+      </div>
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label" data-i18n="cloudPwLabel">雲端密碼（至少 8 字元，僅本次開啟有效）</label>
+      <input type="password" class="settings-input" id="cloudPwInput" data-i18n-placeholder="cloudPwPh" placeholder="輸入雲端密碼" oninput="onCloudPwInput()" autocomplete="new-password">
+      <div class="settings-note" id="cloudPwStatus" style="margin-top:0.25rem"></div>
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label" data-i18n="cloudFileLabel">我的雲端檔名</label>
+      <div style="display:flex; gap:0.5rem">
+        <input type="text" class="settings-input" id="cloudFileName" readonly style="flex:1; font-family:monospace">
+        <button class="log-btn" onclick="copyCloudFileName()" data-i18n="cloudCopy">複製</button>
+      </div>
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label" data-i18n="cloudFreqLabel">自動同步頻率</label>
+      <select class="settings-input" id="cloudFreqSelect" onchange="onCloudFreqChange()" style="cursor:pointer">
+        <option value="realtime" data-i18n="cloudFreqRealtime">即時</option>
+        <option value="15min" data-i18n="cloudFreq15">每 15 分鐘</option>
+        <option value="hourly" data-i18n="cloudFreqHourly">每小時</option>
+        <option value="manual" data-i18n="cloudFreqManual">僅手動</option>
+      </select>
+    </div>
+
+    <div class="settings-actions">
+      <button class="log-btn" onclick="cloudSyncNow()" data-i18n="cloudSyncNow">⬆ 立即同步</button>
+      <button class="log-btn" onclick="cloudShowHistory()" data-i18n="cloudHistory">🕰️ 版本歷史</button>
+    </div>
+    <div class="settings-note" id="cloudStatus"></div>
+    <div class="settings-note warn" id="cloudError" style="display:none"></div>
+    <div id="cloudHistoryBox" style="display:none; margin-top:0.75rem"></div>
+
+    <div class="settings-section-title" data-i18n="cloudFetchTitle" style="margin-top:1rem">讀取他人的雲端資料</div>
+    <div class="settings-field">
+      <label class="settings-label" data-i18n="cloudFetchFileLabel">對方檔名</label>
+      <input type="text" class="settings-input" id="cloudFetchFile" data-i18n-placeholder="cloudFetchFilePh" placeholder="例如：20260925123153482173.json" inputmode="numeric" style="font-family:monospace">
+    </div>
+    <div class="settings-field">
+      <label class="settings-label" data-i18n="cloudFetchPwLabel">對方密碼</label>
+      <input type="password" class="settings-input" id="cloudFetchPw" data-i18n-placeholder="cloudPwPh" placeholder="輸入雲端密碼" autocomplete="new-password">
+    </div>
+    <div class="settings-actions">
+      <button class="log-btn" onclick="cloudFetchOther()" data-i18n="cloudFetchBtn">⬇ 下載</button>
+    </div>
+    <div id="cloudFetchPreview" style="display:none; margin-top:0.75rem"></div>
+  </div>
+
   <div class="footer" data-i18n-html="footerHtml">
     語音與資料皆在瀏覽器本地處理，重新整理頁面將清除紀錄（建議透過匯出 JSON 備份）。<br>
     本工具使用瀏覽器原生語音辨識 + Claude AI 語意解析，僅供技術驗證用途。
@@ -1390,7 +1453,55 @@
       scanDefaultRoom: "未命名房間",
       scanSourceLabel: "（來自空間辨識）",
       scanErrEmpty: "AI 未能辨識出這個空間，請換個角度重拍一次。",
-      scanNoItems: "沒有辨識到清楚可見的物品"
+      scanNoItems: "沒有辨識到清楚可見的物品",
+      cloudTitle: "☁️ 雲端同步",
+      cloudDesc: "開啟後，每次資料變更都會自動把物品＋空間加密（AES-256）上傳到雲端，檔名為時間戳，他人輸入檔名＋密碼即可讀取。密碼只留存在本次開啟的記憶體中，關閉頁面即消失，不會上傳。",
+      cloudRestorePrompt: "偵測到已綁定的雲端檔名，輸入密碼即可從雲端還原資料。",
+      cloudRestoreBtn: "從雲端還原",
+      cloudPwLabel: "雲端密碼（至少 8 字元，僅本次開啟有效）",
+      cloudPwPh: "輸入雲端密碼",
+      cloudPwSet: "✓ 密碼已設定（僅留存於記憶體）",
+      cloudPwTooShort: "密碼至少需要 8 字元",
+      cloudFileLabel: "我的雲端檔名",
+      cloudFileNotYet: "尚未產生（首次同步時自動產生）",
+      cloudCopy: "複製",
+      cloudCopied: "已複製檔名",
+      cloudFreqLabel: "自動同步頻率",
+      cloudFreqRealtime: "即時",
+      cloudFreq15: "每 15 分鐘",
+      cloudFreqHourly: "每小時",
+      cloudFreqManual: "僅手動",
+      cloudSyncNow: "⬆ 立即同步",
+      cloudHistory: "🕰️ 版本歷史",
+      cloudSyncing: "同步中…",
+      cloudSyncOk: "✓ 已同步（{time}）",
+      cloudNeedPw: "請先輸入雲端密碼以啟用同步",
+      cloudErrSync: "同步失敗",
+      cloudErrServer: "伺服器錯誤",
+      cloudErrWrongPw: "密碼錯誤，無法解密",
+      cloudErrBadData: "雲端資料格式錯誤",
+      cloudErrBadName: "檔名格式錯誤（應為全數字.json）",
+      cloudErrPwShort: "密碼至少需要 8 字元",
+      cloudErrNotFound: "找不到這個檔案",
+      cloudErrHistory: "讀取版本歷史失敗",
+      cloudHistoryLoading: "讀取中…",
+      cloudHistoryEmpty: "還沒有歷史版本（同步後才會產生）",
+      cloudNoFile: "尚未產生雲端檔名",
+      cloudVersionPreview: "預覽",
+      cloudVersionInfo: "版本時間：{time}；物品 {n} 筆、空間 {m} 個",
+      cloudVersionRestore: "還原此版本",
+      cloudRestoreConfirm: "確定要還原此版本嗎？目前的資料會被取代（還原前會先自動同步一次）。",
+      cloudBack: "返回",
+      cloudRestoreOk: "✓ 已從雲端還原（{time}）",
+      cloudFetchTitle: "讀取他人的雲端資料",
+      cloudFetchFileLabel: "對方檔名",
+      cloudFetchFilePh: "例如：20260925123153482173.json",
+      cloudFetchPwLabel: "對方密碼",
+      cloudFetchBtn: "⬇ 下載",
+      cloudFetchInfo: "找到資料：物品 {n} 筆、空間 {m} 個（更新於 {time}）",
+      cloudFetchBind: "載入並綁定",
+      cloudBindConfirm: "載入後將取代目前所有資料，並綁定此檔名（之後自動同步會寫到同一個檔案）。確定嗎？",
+      cloudCancel: "取消"
     },
     'en': {
       docTitle: "HomeBase · Voice Inventory Demo",
@@ -1554,7 +1665,55 @@
       scanDefaultRoom: "Unnamed room",
       scanSourceLabel: "(from room scan)",
       scanErrEmpty: "AI couldn't recognize this room. Try another angle.",
-      scanNoItems: "No clearly visible items detected"
+      scanNoItems: "No clearly visible items detected",
+      cloudTitle: "☁️ Cloud Sync",
+      cloudDesc: "When enabled, every data change is automatically encrypted (AES-256) and uploaded to the cloud. The filename is a timestamp; others can read it with the filename + password. The password stays in this session's memory only and disappears when the page closes — it is never uploaded.",
+      cloudRestorePrompt: "A linked cloud file was found. Enter the password to restore your data from the cloud.",
+      cloudRestoreBtn: "Restore from cloud",
+      cloudPwLabel: "Cloud password (min 8 chars, valid for this session only)",
+      cloudPwPh: "Enter cloud password",
+      cloudPwSet: "✓ Password set (kept in memory only)",
+      cloudPwTooShort: "Password needs at least 8 characters",
+      cloudFileLabel: "My cloud filename",
+      cloudFileNotYet: "Not yet generated (auto-created on first sync)",
+      cloudCopy: "Copy",
+      cloudCopied: "Filename copied",
+      cloudFreqLabel: "Auto-sync frequency",
+      cloudFreqRealtime: "Realtime",
+      cloudFreq15: "Every 15 minutes",
+      cloudFreqHourly: "Hourly",
+      cloudFreqManual: "Manual only",
+      cloudSyncNow: "⬆ Sync now",
+      cloudHistory: "🕰️ Version history",
+      cloudSyncing: "Syncing…",
+      cloudSyncOk: "✓ Synced ({time})",
+      cloudNeedPw: "Please enter the cloud password to enable sync",
+      cloudErrSync: "Sync failed",
+      cloudErrServer: "Server error",
+      cloudErrWrongPw: "Wrong password — cannot decrypt",
+      cloudErrBadData: "Cloud data is corrupted",
+      cloudErrBadName: "Bad filename format (should be digits.json)",
+      cloudErrPwShort: "Password needs at least 8 characters",
+      cloudErrNotFound: "File not found",
+      cloudErrHistory: "Failed to load version history",
+      cloudHistoryLoading: "Loading…",
+      cloudHistoryEmpty: "No versions yet (created after sync)",
+      cloudNoFile: "No cloud file yet",
+      cloudVersionPreview: "Preview",
+      cloudVersionInfo: "Version: {time}; {n} items, {m} spaces",
+      cloudVersionRestore: "Restore this version",
+      cloudRestoreConfirm: "Restore this version? Current data will be replaced (a sync runs first).",
+      cloudBack: "Back",
+      cloudRestoreOk: "✓ Restored from cloud ({time})",
+      cloudFetchTitle: "Read someone else's cloud data",
+      cloudFetchFileLabel: "Their filename",
+      cloudFetchFilePh: "e.g. 20260925123153482173.json",
+      cloudFetchPwLabel: "Their password",
+      cloudFetchBtn: "⬇ Download",
+      cloudFetchInfo: "Found: {n} items, {m} spaces (updated {time})",
+      cloudFetchBind: "Load & link",
+      cloudBindConfirm: "Loading will replace all current data and link this filename (future auto-syncs go to the same file). Continue?",
+      cloudCancel: "Cancel"
     }
   };
 
@@ -1674,6 +1833,7 @@
     renderSpaces();
     if (typeof scanState !== 'undefined' && scanState) renderScanPreview();
     if (document.getElementById('reviewOverlay').classList.contains('show')) renderReviewQueue();
+    if (typeof renderCloudSection === 'function') renderCloudSection();
   }
 
   function initRecognition() {
@@ -2018,6 +2178,7 @@ ${entrySchema}
     })).filter(e => e.item.length > 0);
 
     finalized.forEach(e => entries.push(e));
+    markCloudDirty(); // 物品新增 → 雲端同步排程
 
     historyLog.unshift({
       id: 'h_' + Date.now(),
@@ -2093,6 +2254,7 @@ ${entrySchema}
     });
 
     batch.undone = true;
+    markCloudDirty(); // 復原刪除 → 雲端同步排程
     renderLog();
     renderHistory();
   }
@@ -2216,6 +2378,7 @@ ${entrySchema}
           entries = importedData;
           expandedGroups.clear();
           renderLog();
+          markCloudDirty(); // 匯入 → 雲端同步排程
           alert(t('importSuccess', { n: entries.length }));
         } else if (importedData && Array.isArray(importedData.entries)) {
           // 新格式：{ app, version, exportedAt, entries, spaces }
@@ -2263,6 +2426,7 @@ ${entrySchema}
       entries = [];
       expandedGroups.clear();
       renderLog();
+      markCloudDirty(); // 清空 → 雲端同步排程
     }
   }
 
@@ -2382,6 +2546,7 @@ ${t('promptLangLine')}`;
     try {
       localStorage.setItem(SPACES_KEY, JSON.stringify(spaces));
     } catch (e) { /* ignore: 可能是 quota 滿了 */ }
+    markCloudDirty(); // 空間任一變更 → 雲端同步排程（涵蓋新增/刪除房間與區域、照片、拍照建空間）
   }
 
   function findSpace(id) { return spaces.find(s => s.id === id) || null; }
@@ -2808,12 +2973,436 @@ ${t('promptLangLine')}
     switchTab('settings');
   }
 
+  // ===== 雲端同步（Cloud Sync）+ Time Machine 版本歷史 =====
+  // 伺服器：Google Apps Script（HomeBase Cloud），檔名須符合 /^\d{14,20}\.json$/
+  // 隱私：密碼只存放在記憶體變數 cloudPassword，絕不寫入 localStorage；上傳前先用 AES-256-GCM 加密
+  const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzu_inZqgM8nMDKJaWjGr9WqXiMPylihpfazRz_MfSeLhXJBTpwmIwgbc5FWSzYja4Ttg/exec';
+  const CLOUD_FILE_KEY = 'homebase_cloud_file';
+  const CLOUD_FREQ_KEY = 'homebase_cloud_freq';
+  const CLOUD_FILE_RE = /^\d{14,20}\.json$/;
+
+  let cloudPassword = null; // 只存記憶體！絕不寫 localStorage
+  let cloudDirty = false;
+  let cloudSyncTimer = null; // 即時模式 debounce
+  let cloudInterval = null;  // 15分/小時排程
+  let cloudLastSync = null; // ISO string
+  let cloudSyncing = false;
+  let cloudVersionCache = null; // { version, filename, payload } 版本預覽暫存
+  let cloudFetchCache = null;   // { filename, payload } 他人資料暫存
+
+  // ---------- 檔名 ----------
+  function cloudGenFilename() {
+    const d = new Date();
+    const p = (n, l) => String(n).padStart(l, '0');
+    const ts = p(d.getFullYear(), 4) + p(d.getMonth() + 1, 2) + p(d.getDate(), 2) +
+               p(d.getHours(), 2) + p(d.getMinutes(), 2) + p(d.getSeconds(), 2);
+    return ts + String(Math.floor(Math.random() * 1000000)).padStart(6, '0') + '.json';
+  }
+  function cloudPeekFilename() {
+    try {
+      const f = localStorage.getItem(CLOUD_FILE_KEY);
+      return (f && CLOUD_FILE_RE.test(f)) ? f : null;
+    } catch (e) { return null; }
+  }
+  function cloudEnsureFilename() {
+    let f = cloudPeekFilename();
+    if (!f) {
+      f = cloudGenFilename();
+      try { localStorage.setItem(CLOUD_FILE_KEY, f); } catch (e) { /* ignore */ }
+    }
+    updateCloudFileDisplay();
+    return f;
+  }
+  function updateCloudFileDisplay() {
+    const el = document.getElementById('cloudFileName');
+    if (!el) return;
+    const f = cloudPeekFilename();
+    el.value = f || '';
+    el.placeholder = f ? '' : t('cloudFileNotYet');
+  }
+  function copyCloudFileName() {
+    const f = cloudPeekFilename();
+    if (!f) return;
+    const done = () => cloudSetStatus(t('cloudCopied'));
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(f).then(done).catch(() => cloudFallbackCopy(f, done));
+    } else cloudFallbackCopy(f, done);
+  }
+  function cloudFallbackCopy(text, done) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  // ---------- 頻率 ----------
+  function cloudGetFreq() {
+    try {
+      const f = localStorage.getItem(CLOUD_FREQ_KEY);
+      if (['realtime', '15min', 'hourly', 'manual'].indexOf(f) !== -1) return f;
+    } catch (e) { /* ignore */ }
+    return 'realtime';
+  }
+  function onCloudFreqChange() {
+    const v = document.getElementById('cloudFreqSelect').value;
+    try { localStorage.setItem(CLOUD_FREQ_KEY, v); } catch (e) { /* ignore */ }
+    cloudSetupScheduler();
+    if (v !== 'manual' && cloudDirty) cloudScheduleSync();
+  }
+  function cloudSetupScheduler() {
+    if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
+    if (cloudInterval) { clearInterval(cloudInterval); cloudInterval = null; }
+    const f = cloudGetFreq();
+    if (f === '15min') cloudInterval = setInterval(() => { if (cloudDirty) cloudDoSync(false); }, 15 * 60 * 1000);
+    else if (f === 'hourly') cloudInterval = setInterval(() => { if (cloudDirty) cloudDoSync(false); }, 60 * 60 * 1000);
+  }
+
+  // ---------- 標記變更 ----------
+  function markCloudDirty() {
+    cloudDirty = true;
+    if (cloudGetFreq() === 'realtime') cloudScheduleSync();
+  }
+  function cloudScheduleSync() {
+    if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(() => { cloudSyncTimer = null; cloudDoSync(false); }, 5000);
+  }
+
+  // ---------- 密碼（只存記憶體） ----------
+  function onCloudPwInput() {
+    const v = document.getElementById('cloudPwInput').value;
+    const st = document.getElementById('cloudPwStatus');
+    if (v && v.length >= 8) {
+      cloudPassword = v;
+      if (st) st.textContent = t('cloudPwSet');
+      cloudSetError('');
+    } else {
+      cloudPassword = null;
+      if (st) st.textContent = v ? t('cloudPwTooShort') : '';
+    }
+  }
+
+  // ---------- 加密（WebCrypto：PBKDF2-SHA256 100k → AES-GCM-256） ----------
+  function cloudB64enc(bytes) {
+    let s = '';
+    const CH = 0x8000;
+    for (let i = 0; i < bytes.length; i += CH) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    }
+    return btoa(s);
+  }
+  function cloudB64dec(b64) {
+    const s = atob(b64);
+    const b = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+    return b;
+  }
+  async function cloudDeriveKey(pw, salt, usage) {
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+      km, { name: 'AES-GCM', length: 256 }, false, [usage]);
+  }
+  async function cloudEncrypt(pw, obj) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await cloudDeriveKey(pw, salt, 'encrypt');
+    const ct = new Uint8Array(await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(JSON.stringify(obj))));
+    const bundle = { v: 1, salt: cloudB64enc(salt), iv: cloudB64enc(iv), ct: cloudB64enc(ct) };
+    return btoa(JSON.stringify(bundle)); // bundle 全是 ASCII，可直接 btoa
+  }
+  async function cloudDecrypt(pw, payloadB64) {
+    let bundle = null;
+    try { bundle = JSON.parse(atob(payloadB64)); } catch (e) { /* fallthrough */ }
+    if (!bundle || bundle.v !== 1 || !bundle.salt || !bundle.iv || !bundle.ct) {
+      throw new Error(t('cloudErrBadData'));
+    }
+    const key = await cloudDeriveKey(pw, cloudB64dec(bundle.salt), 'decrypt');
+    let pt;
+    try {
+      pt = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: cloudB64dec(bundle.iv) }, key, cloudB64dec(bundle.ct));
+    } catch (e) {
+      throw new Error(t('cloudErrWrongPw')); // 密碼錯誤 → GCM 認證失敗
+    }
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+
+  // ---------- 同步 ----------
+  function cloudBuildPayload() {
+    return {
+      app: 'homebase',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      entries: entries,
+      spaces: spaces
+    };
+  }
+  function cloudSetStatus(msg) {
+    const el = document.getElementById('cloudStatus');
+    if (el) el.textContent = msg || '';
+  }
+  function cloudSetError(msg) {
+    const el = document.getElementById('cloudError');
+    if (!el) return;
+    if (msg) { el.textContent = msg; el.style.display = 'block'; }
+    else { el.style.display = 'none'; el.textContent = ''; }
+  }
+  function cloudFmtTime(iso) {
+    try {
+      return new Date(iso).toLocaleString(currentLang === 'zh-TW' ? 'zh-TW' : 'en-US',
+        { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return iso || ''; }
+  }
+  function cloudFmtSize(b) {
+    b = Number(b) || 0;
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  async function cloudSyncNow() {
+    if (!cloudPassword) { cloudSetError(t('cloudNeedPw')); switchTab('settings'); return; }
+    await cloudDoSync(true);
+  }
+  async function cloudDoSync(force) {
+    if (cloudSyncing) return;
+    if (!force && !cloudDirty) return;
+    if (!cloudPassword) { cloudSetError(t('cloudNeedPw')); return; } // inline 提示，不彈 modal
+    cloudSyncing = true;
+    cloudSetError('');
+    cloudSetStatus(t('cloudSyncing'));
+    try {
+      const filename = cloudEnsureFilename();
+      const data = await cloudEncrypt(cloudPassword, cloudBuildPayload());
+      const res = await fetch(CLOUD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'update', filename: filename, data: data })
+      });
+      const j = await res.json();
+      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
+      cloudDirty = false;
+      cloudLastSync = new Date().toISOString();
+      cloudSetStatus(t('cloudSyncOk', { time: cloudFmtTime(cloudLastSync) }));
+    } catch (err) {
+      cloudSetStatus('');
+      cloudSetError(t('cloudErrSync') + (err && err.message ? '：' + err.message : ''));
+    } finally {
+      cloudSyncing = false;
+    }
+  }
+
+  // ---------- 版本歷史（Time Machine） ----------
+  async function cloudShowHistory() {
+    const box = document.getElementById('cloudHistoryBox');
+    if (!box) return;
+    if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    await renderCloudHistory();
+  }
+  async function renderCloudHistory() {
+    const box = document.getElementById('cloudHistoryBox');
+    if (!box) return;
+    const filename = cloudPeekFilename();
+    if (!filename) {
+      box.innerHTML = `<div class="settings-note">${t('cloudNoFile')}</div>`;
+      return;
+    }
+    box.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
+    try {
+      const res = await fetch(CLOUD_URL + '?action=history&filename=' + encodeURIComponent(filename));
+      const j = await res.json();
+      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
+      const versions = j.versions || [];
+      if (versions.length === 0) {
+        box.innerHTML = `<div class="settings-note">${t('cloudHistoryEmpty')}</div>`;
+        return;
+      }
+      box.innerHTML = versions.map(v => `
+        <div class="history-entry">
+          <div class="history-entry-top">
+            <span class="history-entry-icon">🕰️</span>
+            <span class="history-entry-time">${escapeHtml(cloudFmtTime(v.updated))}</span>
+            <span class="history-entry-count">${escapeHtml(cloudFmtSize(v.size))}</span>
+          </div>
+          <div class="history-entry-actions">
+            <button class="log-btn" onclick="cloudPreviewVersion('${v.version}')">${t('cloudVersionPreview')}</button>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      box.innerHTML = `<div class="settings-note warn">${escapeHtml(t('cloudErrHistory'))}：${escapeHtml(err.message || '')}</div>`;
+    }
+  }
+  async function cloudPreviewVersion(version) {
+    const box = document.getElementById('cloudHistoryBox');
+    if (!box) return;
+    if (!cloudPassword) { cloudSetError(t('cloudNeedPw')); return; }
+    box.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
+    try {
+      const filename = cloudPeekFilename();
+      const res = await fetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename) +
+        '&version=' + encodeURIComponent(version));
+      const j = await res.json();
+      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
+      const payload = await cloudDecrypt(cloudPassword, j.data);
+      cloudVersionCache = { version: version, filename: filename, payload: payload };
+      const nE = Array.isArray(payload.entries) ? payload.entries.length : 0;
+      const nS = Array.isArray(payload.spaces) ? payload.spaces.length : 0;
+      box.innerHTML = `
+        <div class="settings-note">${escapeHtml(t('cloudVersionInfo', { time: cloudFmtTime(j.updated), n: nE, m: nS }))}</div>
+        <div class="settings-actions">
+          <button class="log-btn" onclick="cloudRestoreVersion()">${t('cloudVersionRestore')}</button>
+          <button class="log-btn" onclick="cloudVersionCache=null;renderCloudHistory()">${t('cloudBack')}</button>
+        </div>`;
+    } catch (err) {
+      box.innerHTML = `<div class="settings-note warn">${escapeHtml(err.message || t('cloudErrHistory'))}</div>
+        <div class="settings-actions">
+          <button class="log-btn" onclick="cloudVersionCache=null;renderCloudHistory()">${t('cloudBack')}</button>
+        </div>`;
+    }
+  }
+  async function cloudRestoreVersion() {
+    if (!cloudVersionCache) return;
+    if (!confirm(t('cloudRestoreConfirm'))) return;
+    // 還原前先把當前狀態同步上去，避免弄丟
+    if (cloudDirty && cloudPassword) { await cloudDoSync(true); }
+    const p = cloudVersionCache.payload;
+    entries = Array.isArray(p.entries) ? p.entries : [];
+    spaces = Array.isArray(p.spaces) ? p.spaces : [];
+    saveSpaces(); // 內含 markCloudDirty
+    expandedGroups.clear();
+    renderLog();
+    renderHistory();
+    renderSpaces();
+    cloudVersionCache = null;
+    document.getElementById('cloudHistoryBox').style.display = 'none';
+    await cloudDoSync(true); // 還原本身成為一個新版本
+  }
+
+  // ---------- 讀取他人的雲端資料 ----------
+  async function cloudFetchOther() {
+    const filename = document.getElementById('cloudFetchFile').value.trim();
+    const pw = document.getElementById('cloudFetchPw').value;
+    const prev = document.getElementById('cloudFetchPreview');
+    cloudSetError('');
+    if (!CLOUD_FILE_RE.test(filename)) { cloudSetError(t('cloudErrBadName')); return; }
+    if (!pw || pw.length < 8) { cloudSetError(t('cloudErrPwShort')); return; }
+    prev.style.display = 'block';
+    prev.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
+    try {
+      const res = await fetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
+      const j = await res.json();
+      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrNotFound'));
+      const payload = await cloudDecrypt(pw, j.data);
+      const nE = Array.isArray(payload.entries) ? payload.entries.length : 0;
+      const nS = Array.isArray(payload.spaces) ? payload.spaces.length : 0;
+      cloudFetchCache = { filename: filename, payload: payload };
+      prev.innerHTML = `
+        <div class="settings-note">${escapeHtml(t('cloudFetchInfo', { n: nE, m: nS, time: cloudFmtTime(j.updated) }))}</div>
+        <div class="settings-actions">
+          <button class="log-btn" onclick="cloudBindFetch()">${t('cloudFetchBind')}</button>
+          <button class="log-btn" onclick="cloudFetchCache=null;document.getElementById('cloudFetchPreview').style.display='none'">${t('cloudCancel')}</button>
+        </div>`;
+    } catch (err) {
+      cloudFetchCache = null;
+      prev.innerHTML = `<div class="settings-note warn">${escapeHtml(err.message || t('cloudErrNotFound'))}</div>`;
+    }
+  }
+  function cloudBindFetch() {
+    if (!cloudFetchCache) return;
+    if (!confirm(t('cloudBindConfirm'))) return;
+    const payload = cloudFetchCache.payload;
+    const filename = cloudFetchCache.filename;
+    entries = Array.isArray(payload.entries) ? payload.entries : [];
+    spaces = Array.isArray(payload.spaces) ? payload.spaces : [];
+    saveSpaces(); // 內含 markCloudDirty
+    expandedGroups.clear();
+    renderLog();
+    renderHistory();
+    renderSpaces();
+    try { localStorage.setItem(CLOUD_FILE_KEY, filename); } catch (e) { /* ignore */ }
+    // 綁定後沿用對方密碼作為本次 session 的雲端密碼，之後自動同步寫到同一個檔
+    const pw = document.getElementById('cloudFetchPw').value;
+    document.getElementById('cloudPwInput').value = pw;
+    onCloudPwInput();
+    document.getElementById('cloudFetchPw').value = '';
+    document.getElementById('cloudFetchFile').value = '';
+    document.getElementById('cloudFetchPreview').style.display = 'none';
+    cloudFetchCache = null;
+    updateCloudFileDisplay();
+    cloudCheckRestoreCard();
+    markCloudDirty();
+  }
+
+  // ---------- 啟動還原卡 ----------
+  function cloudCheckRestoreCard() {
+    const card = document.getElementById('cloudRestoreCard');
+    if (!card) return;
+    card.style.display = cloudPeekFilename() ? 'block' : 'none';
+  }
+  async function cloudRestoreFromServer() {
+    const pw = document.getElementById('cloudRestorePw').value;
+    if (!pw || pw.length < 8) { cloudSetError(t('cloudErrPwShort')); return; }
+    const filename = cloudPeekFilename();
+    if (!filename) return;
+    cloudSetError('');
+    cloudSetStatus(t('cloudSyncing'));
+    try {
+      const res = await fetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
+      const j = await res.json();
+      if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrNotFound'));
+      const payload = await cloudDecrypt(pw, j.data);
+      entries = Array.isArray(payload.entries) ? payload.entries : [];
+      spaces = Array.isArray(payload.spaces) ? payload.spaces : [];
+      saveSpaces();
+      expandedGroups.clear();
+      renderLog();
+      renderHistory();
+      renderSpaces();
+      cloudPassword = pw;
+      document.getElementById('cloudPwInput').value = pw;
+      onCloudPwInput();
+      document.getElementById('cloudRestorePw').value = '';
+      cloudCheckRestoreCard();
+      cloudDirty = false;
+      cloudLastSync = j.updated;
+      cloudSetStatus(t('cloudRestoreOk', { time: cloudFmtTime(j.updated) }));
+    } catch (err) {
+      cloudSetStatus('');
+      cloudSetError(err.message || t('cloudErrNotFound'));
+    }
+  }
+
+  // 語言切換時重繪雲端區動態內容（靜態 data-i18n 由 applyLang 統一處理）
+  function renderCloudSection() {
+    updateCloudFileDisplay();
+    const sel = document.getElementById('cloudFreqSelect');
+    if (sel) sel.value = cloudGetFreq();
+    const ps = document.getElementById('cloudPwStatus');
+    if (ps) ps.textContent = cloudPassword ? t('cloudPwSet') : '';
+    cloudSetStatus(cloudLastSync ? t('cloudSyncOk', { time: cloudFmtTime(cloudLastSync) }) : '');
+    cloudCheckRestoreCard();
+    const box = document.getElementById('cloudHistoryBox');
+    if (box && box.style.display !== 'none') {
+      if (cloudVersionCache) cloudPreviewVersion(cloudVersionCache.version);
+      else renderCloudHistory();
+    }
+  }
+
   // Init
   document.addEventListener('DOMContentLoaded', () => {
     loadSpaces();
     applyLang(detectLang());
     initRecognition();
     loadSettings();
+    // 雲端同步初始化
+    document.getElementById('cloudFreqSelect').value = cloudGetFreq();
+    cloudSetupScheduler();
+    updateCloudFileDisplay();
+    cloudCheckRestoreCard();
     if (!hasApiKey()) showApiKeyReminder();
   });
 </script>
