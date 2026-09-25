@@ -3130,6 +3130,30 @@ ${t('promptLangLine')}
     return JSON.parse(new TextDecoder().decode(pt));
   }
 
+  // ---------- 雲端請求（含失敗自動重試一次） ----------
+  // Google 前端偶爾冷啟動抖動：第一次回 HTML 錯誤頁而不是 JSON，重試一次通常就好。
+  // 重試條件只有兩種：(1) fetch 本身丟出網路錯誤；(2) 回應不是合法 JSON。
+  // 拿到合法 JSON 就直接回傳——ok:false 的業務錯誤（檔名不存在等）由呼叫端處理，不重試。
+  // 解密在拿到 JSON 之後才做，不受重試影響。
+  async function cloudFetch(url, options) {
+    const RETRY_WAIT_MS = 3000;
+    let lastErr = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_WAIT_MS));
+      try {
+        const res = await fetch(url, options);
+        const text = await res.text();
+        let j = null;
+        try { j = JSON.parse(text); } catch (e) { /* 非 JSON：前端抖動，進重試 */ }
+        if (j) return j;
+        lastErr = new Error(t('cloudErrServer'));
+      } catch (err) {
+        lastErr = err; // 網路錯誤 → 迴圈重試一次
+      }
+    }
+    throw lastErr || new Error(t('cloudErrServer'));
+  }
+
   // ---------- 同步 ----------
   function cloudBuildPayload() {
     return {
@@ -3177,12 +3201,11 @@ ${t('promptLangLine')}
     try {
       const filename = cloudEnsureFilename();
       const data = await cloudEncrypt(cloudPassword, cloudBuildPayload());
-      const res = await fetch(CLOUD_URL, {
+      const j = await cloudFetch(CLOUD_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'update', filename: filename, data: data })
       });
-      const j = await res.json();
       if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
       cloudDirty = false;
       cloudLastSync = new Date().toISOString();
@@ -3213,8 +3236,7 @@ ${t('promptLangLine')}
     }
     box.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
     try {
-      const res = await fetch(CLOUD_URL + '?action=history&filename=' + encodeURIComponent(filename));
-      const j = await res.json();
+      const j = await cloudFetch(CLOUD_URL + '?action=history&filename=' + encodeURIComponent(filename));
       if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
       const versions = j.versions || [];
       if (versions.length === 0) {
@@ -3243,9 +3265,8 @@ ${t('promptLangLine')}
     box.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
     try {
       const filename = cloudPeekFilename();
-      const res = await fetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename) +
+      const j = await cloudFetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename) +
         '&version=' + encodeURIComponent(version));
-      const j = await res.json();
       if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrServer'));
       const payload = await cloudDecrypt(cloudPassword, j.data);
       cloudVersionCache = { version: version, filename: filename, payload: payload };
@@ -3293,8 +3314,7 @@ ${t('promptLangLine')}
     prev.style.display = 'block';
     prev.innerHTML = `<div class="settings-note">${t('cloudHistoryLoading')}</div>`;
     try {
-      const res = await fetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
-      const j = await res.json();
+      const j = await cloudFetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
       if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrNotFound'));
       const payload = await cloudDecrypt(pw, j.data);
       const nE = Array.isArray(payload.entries) ? payload.entries.length : 0;
@@ -3351,8 +3371,7 @@ ${t('promptLangLine')}
     cloudSetError('');
     cloudSetStatus(t('cloudSyncing'));
     try {
-      const res = await fetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
-      const j = await res.json();
+      const j = await cloudFetch(CLOUD_URL + '?action=download&filename=' + encodeURIComponent(filename));
       if (!j || !j.ok) throw new Error((j && j.error) || t('cloudErrNotFound'));
       const payload = await cloudDecrypt(pw, j.data);
       entries = Array.isArray(payload.entries) ? payload.entries : [];
