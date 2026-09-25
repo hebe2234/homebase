@@ -287,9 +287,65 @@
     font-size: 0.8rem; color: var(--muted); background: var(--bg); border-radius: 6px;
     padding: 0.5rem 0.7rem; margin-top: 0.6rem; text-align: left;
   }
+  .photozoom-edit {
+    background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted);
+    height: 2rem; padding: 0 0.6rem; font-size: 0.85rem; cursor: pointer; flex-shrink: 0;
+  }
+  .photozoom-actions { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.7rem; flex-wrap: wrap; }
+  /* 框選編輯器：整圖＋可拖曳 div（pointer events，滑鼠＋觸控） */
+  .bbox-edit-wrap { position: relative; margin: 0 auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .bbox-edit-img { width: 100%; height: 100%; display: block; border-radius: 8px; pointer-events: none; }
+  .bbox-edit-box {
+    position: absolute; border: 2px solid #22c55e; background: rgba(34,197,94,0.15);
+    touch-action: none; cursor: move; box-sizing: border-box;
+  }
+  .bbox-edit-handle {
+    position: absolute; width: 28px; height: 28px; background: #22c55e;
+    border: 2px solid #fff; border-radius: 50%; touch-action: none; box-sizing: border-box;
+  }
+  .bbox-edit-handle.nw { left: -14px; top: -14px; cursor: nwse-resize; }
+  .bbox-edit-handle.ne { right: -14px; top: -14px; cursor: nesw-resize; }
+  .bbox-edit-handle.sw { left: -14px; bottom: -14px; cursor: nesw-resize; }
+  .bbox-edit-handle.se { right: -14px; bottom: -14px; cursor: nwse-resize; }
+  /* 輸入列 📷 來源選單（拍照／相簿，非 modal） */
+  .input-bar { position: relative; }
+  .photo-source-menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 60;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18); overflow: hidden; min-width: 9.5rem;
+  }
+  .photo-source-menu button {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    padding: 0.7rem 1rem; font: inherit; font-size: 0.9rem; color: inherit; cursor: pointer;
+  }
+  .photo-source-menu button:active { background: var(--soft); }
   .photo-marker {
     background: none; border: none; cursor: pointer; font-size: 0.95rem; padding: 0 0.15rem; flex-shrink: 0;
   }
+  /* ===== 多照片縮圖列（拍照累積 / 相簿多選） ===== */
+  .photo-thumbs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .photo-thumb { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+  .photo-thumb img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; display: block; }
+  .photo-thumb-del {
+    position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,0.62); color: #fff; font-size: 11px; line-height: 1;
+    cursor: pointer; padding: 0; font-family: inherit;
+  }
+  .photo-add-tile {
+    width: 72px; height: 72px; border: 1.5px dashed var(--border); border-radius: 8px;
+    background: none; color: var(--muted); font-size: 0.72rem; cursor: pointer; font-family: inherit;
+  }
+  .photo-analyze-row { margin-bottom: 0.2rem; }
+  .scan-item-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
+  /* ===== 框選手動微調（zoom modal 編輯模式） ===== */
+  .bbox-handle {
+    position: absolute; width: 28px; height: 28px; background: #22c55e; border: 2px solid #fff;
+    border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.45); touch-action: none; z-index: 2; padding: 0;
+  }
+  .bbox-handle[data-h="nw"] { left: 0; top: 0; transform: translate(-50%,-50%); cursor: nwse-resize; }
+  .bbox-handle[data-h="ne"] { right: 0; top: 0; transform: translate(50%,-50%); cursor: nesw-resize; }
+  .bbox-handle[data-h="sw"] { left: 0; bottom: 0; transform: translate(-50%,50%); cursor: nesw-resize; }
+  .bbox-handle[data-h="se"] { right: 0; bottom: 0; transform: translate(50%,50%); cursor: nwse-resize; }
 
   .review-sheet {
     background: var(--soft); width: 100%; max-width: 640px; max-height: 88vh;
@@ -745,15 +801,20 @@
   <!-- 單一輸入列：文字輸入＋拍照按鈕（聊天式） -->
   <div class="input-bar">
     <input type="text" class="input-bar-text" id="textInput" placeholder="輸入物品，或按 📷 拍照辨識…" oninput="handleTextInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitTextInput();}">
-    <button class="input-bar-photo" onclick="document.getElementById('photoInput').click()" aria-label="photo">📷</button>
+    <button class="input-bar-photo" onclick="togglePhotoSourceMenu(event)" aria-label="photo">📷</button>
+    <div class="photo-source-menu" id="photoSourceMenu" style="display:none">
+      <button onclick="pickPhotoSource('camera')" data-i18n="photoTake">📷 拍照</button>
+      <button onclick="pickPhotoSource('album')" data-i18n="photoAlbum">🖼️ 從相簿選</button>
+    </div>
     <input type="file" accept="image/*" capture="environment" id="photoInput" style="display:none" onchange="handlePhotoSelect(event)">
+    <input type="file" accept="image/*" id="photoAlbumInput" multiple style="display:none" onchange="handlePhotoSelect(event)">
   </div>
   <div class="text-hint" id="textHintLabel" data-i18n="textHint">可一次輸入多筆，AI 會自動拆解每個物品</div>
 
   <div class="photo-card" id="photoCard" style="display:none">
-    <div class="photo-preview-wrap" id="photoPreviewWrap" style="display:none">
-      <img id="photoPreviewImg" src="" alt="預覽" data-i18n-alt="photoPreviewAlt">
-      <button class="photo-preview-clear" onclick="clearPhoto()" data-i18n="photoReselect">✕ 重新選擇</button>
+    <div id="photoThumbStrip" class="photo-thumbs"></div>
+    <div class="photo-analyze-row">
+      <button class="log-btn" id="photoAnalyzeBtn" onclick="processTranscript()" data-i18n="photoStartAnalyze" disabled>✅ 開始辨識</button>
     </div>
   </div>
 
@@ -1039,10 +1100,18 @@
   <div class="photozoom-sheet">
     <div class="photozoom-head">
       <div class="photozoom-title" id="photoZoomTitle"></div>
-      <button class="photozoom-close" onclick="closePhotoZoom()">✕</button>
+      <div style="display:flex; gap:0.4rem; flex-shrink:0">
+        <button class="photozoom-edit" id="photoZoomEditBtn" onclick="startBboxEdit()" style="display:none" data-i18n="photoZoomEdit">✏️ 調整框選</button>
+        <button class="photozoom-close" onclick="closePhotoZoom()">✕</button>
+      </div>
     </div>
     <div id="photoZoomBody"></div>
     <div class="photozoom-hint" id="photoZoomHint"></div>
+    <div class="photozoom-actions" id="photoZoomActions" style="display:none">
+      <button class="log-btn" onclick="saveBboxEdit()" data-i18n="photoZoomSave">儲存</button>
+      <button class="log-btn" id="photoZoomResetBtn" onclick="resetBboxEdit()" data-i18n="photoZoomResetAi">重設為 AI 原始</button>
+      <button class="log-btn" onclick="cancelBboxEdit()" data-i18n="photoZoomCancel">取消</button>
+    </div>
     <div class="photozoom-note" id="photoZoomNote" style="display:none"></div>
   </div>
 </div>
@@ -1252,13 +1321,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   let historyLog = []; // [{ id, timestamp, source, sourceLabel, itemIds: [entryIndexAtTimeOfInsert...], items: [...] }]
   let reviewQueue = []; // working copy of entries currently being confirmed
   let reviewMeta = { sourceLabel: '', source: '' };
-  let photoBase64 = null;
+  let photoList = []; // [{ dataUrl, base64 }]：本次累積的照片（拍照＋相簿多選），上限 PHOTO_MAX_COUNT
+  const PHOTO_MAX_COUNT = 6;
   let photoMime = 'image/jpeg';
   let inputStartedAt = null; // timestamp when user began this input (first keystroke / photo taken)
-  // ===== 拍照建檔：AI 辨識空間＋物品 → 預覽 → 直接入庫 =====
-  // photoState = { newPhotoDataUrl, newPhotoBase64, roomName, roomType, zones: [name],
-  //   items: [{ name, zoneName, zoneId, qty, checked }], matchSpaceId ('new' 或空間 id),
-  //   confidence: 'high'|'medium'|'low', chosenSpaceId, refThumb, nameMatched, startedAt, submittedAt }
+  // ===== 拍照建檔：N 張新照片＋各空間基準照 → AI 判斷空間＋辨識物品 → 預覽 → 直接入庫 =====
+  // photoState = { photos: [{dataUrl}], roomName, roomType, zones: [name],
+  //   items: [{ name, zoneName, zoneId, qty, checked, confidence, note, photoIndex (1-based|null), bbox }],
+  //   matchSpaceId ('new' 或空間 id), confidence: 'high'|'medium'|'low',
+  //   chosenSpaceId, refThumb, nameMatched, startedAt, submittedAt }
   let photoState = null;
   // ===== 空間（Spaces）：房間 → 區域 → 物品 =====
   // space = { id, name, photo (dataURL JPEG 或 null), zones: [{ id, name }] }
@@ -1275,9 +1346,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   }
 
   // 單一輸入列：模式由是否有照片決定（有照片 = 拍照模式，否則文字模式）
-  function inputMode() { return photoBase64 ? 'photo' : 'text'; }
+  function inputMode() { return photoList.length > 0 ? 'photo' : 'text'; }
   function refreshInputBar() {
-    const hasPhoto = !!photoBase64;
+    const hasPhoto = photoList.length > 0;
     const hasText = document.getElementById('textInput').value.trim().length > 0;
     const btn = document.getElementById('processBtn');
     btn.disabled = !(hasPhoto || hasText);
@@ -1285,11 +1356,32 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     btn.dataset.i18n = key; // 讓 applyLang 的 data-i18n 重繪保持一致
     btn.textContent = t(key);
     document.getElementById('photoCard').style.display = hasPhoto ? 'block' : 'none';
+    renderPhotoThumbs(); // 縮圖列跟著重繪（語言切換時也會更新文字）
+  }
+  // 多照片縮圖列：已拍縮圖（可刪）＋「再拍一張」＋「開始辨識」
+  function renderPhotoThumbs() {
+    const strip = document.getElementById('photoThumbStrip');
+    if (!strip) return;
+    const canAdd = photoList.length < PHOTO_MAX_COUNT;
+    strip.innerHTML = photoList.map((p, i) => `
+      <div class="photo-thumb">
+        <img src="${p.dataUrl}" alt="">
+        <button class="photo-thumb-del" onclick="removePhotoAt(${i})" aria-label="delete">✕</button>
+      </div>`).join('') +
+      (canAdd ? `<button class="photo-add-tile" onclick="document.getElementById('photoInput').click()">＋<br>${escapeHtml(t('photoAddMore'))}</button>` : '');
+    const ab = document.getElementById('photoAnalyzeBtn');
+    if (ab) ab.disabled = photoList.length === 0;
+  }
+  function removePhotoAt(i) {
+    if (i < 0 || i >= photoList.length) return;
+    photoList.splice(i, 1);
+    if (photoList.length === 0) inputStartedAt = null;
+    refreshInputBar();
   }
   function submitTextInput() {
     if (document.getElementById('textInput').value.trim().length === 0) return;
     if (photoState) cancelPhotoInventory(); // 有未確認的拍照預覽 → 丟棄，改走文字流程
-    else if (photoBase64) clearPhoto();
+    else if (photoList.length) clearPhoto();
     processTranscript();
   }
 
@@ -1300,47 +1392,82 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     refreshInputBar();
   }
 
-  function handlePhotoSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+  // ===== 輸入列 📷 來源選單：拍照 / 從相簿選（小 popup，非 modal） =====
+  function togglePhotoSourceMenu(e) {
+    if (e) e.stopPropagation();
+    const m = document.getElementById('photoSourceMenu');
+    if (!m) return;
+    m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+  }
+  function pickPhotoSource(which) {
+    const m = document.getElementById('photoSourceMenu');
+    if (m) m.style.display = 'none';
+    const input = document.getElementById(which === 'camera' ? 'photoInput' : 'photoAlbumInput');
+    if (input) input.click();
+  }
+  // 點選單外面自動關閉
+  document.addEventListener('click', (e) => {
+    const m = document.getElementById('photoSourceMenu');
+    if (m && m.style.display === 'block' && !m.contains(e.target)) m.style.display = 'none';
+  });
+
+  // 多照片：相簿可一次多選（上限 6 張），拍照可一張一張累積
+  async function handlePhotoSelect(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = ''; // 清掉，下次選相同檔案也會觸發 change
+    if (!files.length) return;
     inputStartedAt = new Date().toISOString();
-    loadPhoto(file);
+    const room = PHOTO_MAX_COUNT - photoList.length;
+    if (room <= 0) { alert(t('photoMaxPhotos', { max: PHOTO_MAX_COUNT })); return; }
+    const take = files.slice(0, room);
+    if (files.length > take.length) alert(t('photoMaxPhotos', { max: PHOTO_MAX_COUNT }));
+    for (const f of take) {
+      try { await loadPhotoFile(f); } catch (e) { /* 單張失敗就跳過 */ }
+    }
+    document.getElementById('errorBox').classList.remove('show');
+    refreshInputBar();
   }
 
-  function loadPhoto(file) {
-    // Convert to JPEG via canvas — normalizes HEIC/PNG/WebP and compresses large images
-    photoMime = 'image/jpeg';
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX = 1280;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-        photoBase64 = dataUrl.split(',')[1];
-
-        document.getElementById('photoPreviewImg').src = dataUrl;
-        document.getElementById('photoPreviewWrap').style.display = 'block';
-        document.getElementById('errorBox').classList.remove('show');
-        refreshInputBar();
+  // 單張照片 → 壓成最長邊 1600px JPEG 0.88（送 AI 辨識＋定位用），回傳 { dataUrl, base64 }
+  function loadPhotoFile(file) {
+    return new Promise((resolve, reject) => {
+      // Convert to JPEG via canvas — normalizes HEIC/PNG/WebP and compresses large images
+      photoMime = 'image/jpeg';
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const MAX = 1600; // 定位需要像素細節；photoStore 另存 1024px 版本
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+              if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+              else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            photoList.push({ dataUrl: dataUrl, base64: dataUrl.split(',')[1] });
+            resolve();
+          } catch (err) { reject(err); }
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
       };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   function clearPhoto() {
-    photoBase64 = null;
-    document.getElementById('photoPreviewWrap').style.display = 'none';
-    document.getElementById('photoInput').value = '';
+    photoList = [];
+    inputStartedAt = null;
+    const cam = document.getElementById('photoInput');
+    if (cam) cam.value = '';
+    const album = document.getElementById('photoAlbumInput');
+    if (album) album.value = '';
     refreshInputBar();
   }
 
@@ -1555,6 +1682,19 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       photoZoomLoadFail: "照片載入失敗",
       photoZoomHintCrop: "🔍 裁切放大 — 點圖片查看整張原圖",
       photoZoomHintFull: "🖼️ 整張原圖 — 點圖片回到裁切放大",
+      photoZoomHintEdit: "✏️ 拖曳框線可移動，拖曳四角圓點可縮放",
+      photoZoomBoxInvalid: "框選無效，請重新調整",
+      photoZoomEdit: "✏️ 調整框選",
+      photoZoomSave: "儲存",
+      photoZoomResetAi: "重設為 AI 原始",
+      photoZoomCancel: "取消",
+      photoTake: "📷 拍照",
+      photoAlbum: "🖼️ 從相簿選",
+      photoAddMore: "再拍一張",
+      photoMaxPhotos: "一次最多 {max} 張照片，已保留前 {max} 張",
+      photoStartAnalyze: "✅ 開始辨識",
+      photoLabelN: "照片 {i}",
+      photoThumbTitle: "第 {i} 張照片",
       photoStoreInfo: "照片庫佔用：{size}（{n} 張）",
       photoStoreClear: "清理照片庫",
       photoStoreClearConfirm: "確定要清理照片庫嗎？物品的定位框會保留，但之後將無法查看照片。",
@@ -1766,6 +1906,19 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       photoZoomLoadFail: "Failed to load photo",
       photoZoomHintCrop: "🔍 Cropped zoom — tap image to see the full photo",
       photoZoomHintFull: "🖼️ Full photo — tap image to return to cropped zoom",
+      photoZoomHintEdit: "✏️ Drag the box to move, drag the corner dots to resize",
+      photoZoomBoxInvalid: "Invalid box — please adjust again",
+      photoZoomEdit: "✏️ Adjust box",
+      photoZoomSave: "Save",
+      photoZoomResetAi: "Reset to AI original",
+      photoZoomCancel: "Cancel",
+      photoTake: "📷 Take photo",
+      photoAlbum: "🖼️ Choose from album",
+      photoAddMore: "Add photo",
+      photoMaxPhotos: "Up to {max} photos at a time — kept the first {max}",
+      photoStartAnalyze: "✅ Analyze",
+      photoLabelN: "Photo {i}",
+      photoThumbTitle: "Photo {i}",
       photoStoreInfo: "Photo library: {size} ({n} photos)",
       photoStoreClear: "Clear photo library",
       photoStoreClearConfirm: "Clear the photo library? Location boxes on items will be kept, but photos will no longer be viewable.",
@@ -2655,19 +2808,23 @@ ${t('promptLangLine')}`;
   }
 
   // ===== 拍照建檔：新照片＋各空間基準照 → AI 判斷空間＋辨識物品 → 預覽 → 直接入庫 =====
-  function buildPhotoPrompt(refSpaces) {
+  function buildPhotoPrompt(refSpaces, nPhotos) {
+    const newSection = nPhotos > 1
+      ? `第 1 到第 ${nPhotos} 張是使用者剛拍的新照片（同一次拍攝，很可能是同一空間的不同角度）。`
+      : `第 1 張是使用者剛拍的新照片。`;
+    const refStart = nPhotos + 1;
     const refSection = refSpaces.length > 0
-      ? `第 2 張之後的照片是「既有空間的基準照片」，依序對應：
-${refSpaces.map((s, i) => `第 ${i + 2} 張照片 = 空間「${s.name}」（id: ${s.id}）`).join('\n')}`
-      : `（目前沒有任何既有空間的基準照片，只有第 1 張新照片）`;
+      ? `第 ${refStart} 張之後的照片是「既有空間的基準照片」，依序對應：
+${refSpaces.map((s, i) => `第 ${refStart + i} 張照片 = 空間「${s.name}」（id: ${s.id}）`).join('\n')}`
+      : `（目前沒有任何既有空間的基準照片，只有新照片）`;
     return `你是一個家庭庫存視覺辨識 AI。
 
 【輸入照片】
-- 第 1 張是使用者剛拍的新照片。
+- ${newSection}
 ${refSection}
 
 【任務】
-1. 判斷第 1 張新照片屬於哪一個既有空間（回傳該空間 id），或這是一個全新的空間（回傳 "new"）。
+1. 判斷新照片屬於哪一個既有空間（回傳該空間 id），或這是一個全新的空間（回傳 "new"）。${nPhotos > 1 ? `${nPhotos} 張新照片視為同一次拍攝，空間只需判斷一次。` : ''}
 2. 同時辨識新照片的房間資訊與清楚可見的物品。
 
 【空間比對關鍵規則 — 全景 vs 局部特寫】
@@ -2679,13 +2836,15 @@ ${refSection}
 【房間與物品辨識】
 - roomName：簡短口語的房間名稱；roomType：客廳/臥室/廚房/書房/浴室/陽台/儲藏室等類型
 - zones：新照片中可見的主要家具或收納區域名稱（例如：流理台、衣櫃、書桌），最多 8 個
-- items：陣列，每項為 {"name": "物品名稱", "zone": "對應 zones 中的區域名稱（無法判斷則空字串）", "qty": 數量數字（數得出才填，否則 null）, "confidence": "high | medium | low", "note": "不確定原因短句（有把握則空字串）"}
-- 每件物品加 "bbox": [ymin, xmin, ymax, xmax]，0-1000 正規化整數座標（相對整張圖，左上角為原點），框住該物品本體；若看不清或無法定位，bbox 填 null
+- items：陣列，每項為 {"name": "物品名稱", "zone": "對應 zones 中的區域名稱（無法判斷則空字串）", "qty": 數量數字（數得出才填，否則 null）, "confidence": "high | medium | low", "note": "不確定原因短句（有把握則空字串）", "photoIndex": 看得最清楚的那張新照片編號（1 到 ${nPhotos} 的整數）, "bbox": [ymin, xmin, ymax, xmax]}
+- 跨照片去重：同一件實體物品在多張照片中出現，只列一次（以看得最清楚的那張為準，photoIndex 填那張的編號，bbox 框那張照片中的物品）；長得像但是不同件的物品要分開列。
 - 每件物品都要評估信心度：
   - high：清楚可見、確定是什麼物品
   - medium：看得到但有疑慮（例如部分被遮擋、角度奇怪、可能是 A 也可能是 B）
   - low：疊放在一起分不清、只看到一小部分、幾乎無法確定是什麼
 - 重要規則：疊在一起、被其他物品遮擋、只看到局部、無法確定是什麼的物品，**必須**標 medium 或 low，並在 note 用使用者語言寫一句簡短原因（例如「被書堆遮擋只看到一半」「可能是杯子或花瓶」），絕對不許默默當成 high 混入。
+- bbox：0-1000 正規化整數座標（相對於該 photoIndex 照片，左上角為原點），框住該物品本體；若看不清或無法定位，bbox 填 null
+- 框選精度規則：框必須貼緊物品的可見邊緣（不要留白太多，也不要切掉物品本體）；先框一次，再逐邊檢查上/下/左/右是否貼齊物品邊界，有偏差就修正後再輸出最終座標；被其他物品遮擋時，只框看得到的部分，不要腦補被擋住的範圍。
 - note 使用使用者語言（${t('promptLangName')}）撰寫；若完全沒有可辨識物品，items 回傳空陣列（此時仍要完成空間判斷）。
 
 使用者語言：${t('promptLangName')}
@@ -2698,13 +2857,13 @@ ${t('promptLangLine')}
   "roomName": "房間名稱",
   "roomType": "房間類型",
   "zones": ["區域1", "區域2"],
-  "items": [{"name": "物品名稱", "zone": "區域名稱", "qty": 2, "confidence": "high", "note": "", "bbox": [120, 300, 450, 620]}]
+  "items": [{"name": "物品名稱", "zone": "區域名稱", "qty": 2, "confidence": "high", "note": "", "photoIndex": 1, "bbox": [120, 300, 450, 620]}]
 }`;
   }
 
   async function runPhotoInventory() {
     if (!hasApiKey()) { showApiKeyReminder(); return; }
-    if (!photoBase64) return;
+    if (!photoList.length) return;
     const btn = document.getElementById('processBtn');
     const loading = document.getElementById('loading');
     const loadingLabel = document.querySelector('#loading span');
@@ -2717,18 +2876,20 @@ ${t('promptLangLine')}
 
     const submittedAt = new Date().toISOString();
     const startedAt = inputStartedAt || submittedAt;
-    // 沿用拍照上傳的壓縮規格（最長邊 1280px、JPEG 0.88）作為空間照片與基準照來源
-    const newPhotoDataUrl = document.getElementById('photoPreviewImg').src;
+    // 快照本次照片（避免辨識過程中使用者增刪縮圖列）
+    const photos = photoList.map(p => ({ dataUrl: p.dataUrl }));
+    const photoB64 = photoList.map(p => p.base64);
+    const nPhotos = photos.length;
 
     try {
       const refSpaces = spaces.filter(s => s.refPhotos && s.refPhotos.length > 0);
-      const images = [{ data: photoBase64, mime: 'image/jpeg' }];
+      const images = photoB64.map(b64 => ({ data: b64, mime: 'image/jpeg' }));
       refSpaces.forEach(s => {
         const b64 = (s.refPhotos[0] || '').split(',')[1];
         if (b64) images.push({ data: b64, mime: 'image/jpeg' });
       });
 
-      const rawText = await callAI(buildPhotoPrompt(refSpaces), images);
+      const rawText = await callAI(buildPhotoPrompt(refSpaces, nPhotos), images);
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error(t('errNoJson') + rawText);
       const parsed = JSON.parse(jsonMatch[0]);
@@ -2757,6 +2918,11 @@ ${t('promptLangLine')}
         if (!(ymin < ymax && xmin < xmax)) return null;
         return n;
       };
+      // photoIndex：1-based，看得最清楚的那張新照片；越界或非法 → null（該物品不綁照片）
+      const photoIndexOf = v => {
+        const n = Number(v);
+        return Number.isInteger(n) && n >= 1 && n <= nPhotos ? n : null;
+      };
       const items = Array.isArray(parsed.items)
         ? parsed.items.filter(it => it && typeof it === 'object').map(it => {
             const iconf = confOf(it.confidence);
@@ -2767,6 +2933,7 @@ ${t('promptLangLine')}
               qty: (it.qty === null || it.qty === undefined || it.qty === '') ? '' : Number(it.qty),
               confidence: iconf,
               note: str(it.note).slice(0, 140),
+              photoIndex: photoIndexOf(it.photoIndex),
               bbox: bboxOf(it.bbox),
               checked: iconf !== 'low' // low 預設不勾選；high/medium 預設勾選
             };
@@ -2784,7 +2951,7 @@ ${t('promptLangLine')}
       items.forEach(it => { it.zoneId = chosenSp ? resolveZoneId(chosenSp, it.zoneName) : ''; });
 
       photoState = {
-        newPhotoDataUrl, newPhotoBase64: photoBase64,
+        photos: photos,
         roomName: roomName || (matchSpaceName(spaceMatch) || ''),
         roomType, zones, items,
         matchSpaceId: spaceMatch, confidence, chosenSpaceId,
@@ -2832,15 +2999,12 @@ ${t('promptLangLine')}
 
     box.innerHTML = `
     <div class="scan-preview">
-      <div style="display:flex;gap:0.6rem;margin-bottom:0.8rem;">
-        <figure style="margin:0;flex:1;min-width:0;">
-          <img class="scan-preview-photo" style="margin-bottom:0.25rem;" src="${st.newPhotoDataUrl}" alt="">
-          <figcaption style="font-size:0.72rem;color:var(--muted);text-align:center;">${escapeHtml(t('photoNewPhotoLabel'))}</figcaption>
-        </figure>
-        ${st.refThumb ? `<figure style="margin:0;flex:1;min-width:0;">
-          <img class="scan-preview-photo" style="margin-bottom:0.25rem;" src="${st.refThumb}" alt="">
-          <figcaption style="font-size:0.72rem;color:var(--muted);text-align:center;">${escapeHtml(t('photoRefLabel'))}</figcaption>
-        </figure>` : ''}
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.8rem;">
+        ${st.photos.map((p, i) => `
+          <figure style="margin:0;cursor:pointer;" onclick="openPhotoPreviewFull(${i})">
+            <img src="${p.dataUrl}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;display:block;" alt="">
+            <figcaption style="font-size:0.7rem;color:var(--muted);text-align:center;">${escapeHtml(t('photoLabelN', { i: i + 1 }))}</figcaption>
+          </figure>`).join('')}
       </div>
       <div class="scan-loc-bar">
         <div class="scan-created-note" style="margin-bottom:0.3rem;">${matchSp ? '🔍 ' + escapeHtml(t('photoMatchIs', { name: matchSp.name })) : '🆕 ' + escapeHtml(t('photoMatchNew'))}</div>
@@ -2866,19 +3030,25 @@ ${t('promptLangLine')}
         <label>${escapeHtml(t('photoItemsLabel'))}</label>
         ${st.items.length === 0
           ? `<div class="scan-empty-note">${escapeHtml(t('photoNoItems'))}</div>`
-          : st.items.map((it, i) => `
+          : st.items.map((it, i) => {
+            // 每件物品顯示其 photoIndex（1-based）對應照片的縮圖；無效 photoIndex → 不顯示
+            const ph = (it.photoIndex && st.photos[it.photoIndex - 1]) ? st.photos[it.photoIndex - 1] : null;
+            return `
           <div>
             <div class="scan-item-row">
               <input type="checkbox"${it.checked ? ' checked' : ''} onchange="photoState.items[${i}].checked=this.checked">
+              ${ph ? `<img class="scan-item-thumb" src="${ph.dataUrl}" alt="" title="${escapeAttr(t('photoThumbTitle', { i: it.photoIndex }))}" onclick="openPhotoPreviewFull(${it.photoIndex - 1})">` : ''}
               <input type="text" style="${inputCss}" value="${escapeAttr(it.name)}" oninput="photoState.items[${i}].name=this.value">
               <span style="color:var(--muted);">×</span>
               <input type="number" min="0" style="width:3.2rem;${inputCss.replace('flex:1;min-width:0;', '')}" value="${escapeAttr(it.qty)}" placeholder="${escapeAttr(t('photoQtyPh'))}" oninput="photoState.items[${i}].qty=this.value">
               <select class="settings-input" style="max-width:7rem;cursor:pointer;" onchange="onPhotoItemZone(${i}, this.value)">${photoZoneOptions(st, it)}</select>
               ${it.confidence !== 'high' ? `<span class="conf-badge" title="${escapeAttr(t(it.confidence === 'low' ? 'photoConfLow' : 'photoConfMedium'))}">⚠️</span>` : ''}
+              ${it.bbox ? `<button class="photo-marker" onclick="openPhotoPreviewZoom(${i})" title="">🖼️</button>` : ''}
               <button class="scan-item-del" onclick="photoRemoveItem(${i})">✕</button>
             </div>
             ${it.confidence !== 'high' && it.note ? `<div class="scan-item-note">⚠️ ${escapeHtml(it.note)}</div>` : ''}
-          </div>`).join('')}
+          </div>`;
+          }).join('')}
       </div>
       <div class="settings-note" style="margin-bottom:0.7rem;">${escapeHtml(t('photoRefNote'))}</div>
       <div class="scan-actions">
@@ -2932,7 +3102,7 @@ ${t('promptLangLine')}
         sp = {
           id: uid('sp_'),
           name: name,
-          photo: st.newPhotoDataUrl,
+          photo: st.photos[0] ? st.photos[0].dataUrl : '',
           refPhotos: [],
           zones: zoneNames.map(zn => ({ id: uid('z_'), name: zn }))
         };
@@ -2948,8 +3118,12 @@ ${t('promptLangLine')}
         });
       }
       const spaceId = sp.id;
-      // 2. 新照片滾動成為該空間的最新基準（保留最近 3 張）
-      try { await pushRefPhoto(sp, st.newPhotoDataUrl); } catch (e) { /* ignore */ }
+      // 2. 新照片滾動成為該空間的最新基準（保留最近 3 張；最新先入）
+      try {
+        for (let i = st.photos.length - 1; i >= 0; i--) {
+          await pushRefPhoto(sp, st.photos[i].dataUrl);
+        }
+      } catch (e) { /* ignore */ }
       saveSpaces(); // → markCloudDirty（空間變更）
       // 3. 勾選物品直接寫入 entries（inventory）
       const now = new Date().toISOString();
@@ -2971,8 +3145,10 @@ ${t('promptLangLine')}
             placed_at_raw: '',
             spaceId: spaceId,
             zoneId: zoneId,
-            bbox: it.bbox ? it.bbox.slice() : null, // [ymin,xmin,ymax,xmax] 0-1000；無定位則 null
-            photoId: null, // 下方統一寫入：有 bbox 的物品共用同一張原圖
+            photoIndex: it.photoIndex || null, // AI 判斷看得最清楚的那張（1-based）；無效 → null
+            bbox: it.bbox ? it.bbox.slice() : null, // 目前的框（使用者可微調）
+            bboxAi: it.bbox ? it.bbox.slice() : null, // AI 原始框（「重置」時回復此版本）
+            photoId: null, // 下方依 photoIndex 逐張寫入對應 photoId
             input_started_at: st.startedAt,
             submitted_at: st.submittedAt,
             confirmed_at: now,
@@ -2980,14 +3156,17 @@ ${t('promptLangLine')}
             raw_transcript: t('photoSourceLabel')
           };
         });
-      // 照片庫：本次原圖只存一筆（最長邊 1024px、JPEG 0.72），有 bbox 的物品共用同一 photoId
-      const withBbox = finalized.filter(e => e.bbox);
-      if (withBbox.length > 0) {
+      // 照片庫：本次每張原圖各存一筆（最長邊 1024px、JPEG 0.72）；物品依 photoIndex 綁定對應 photoId
+      const photoIds = [];
+      for (let i = 0; i < st.photos.length; i++) {
         try {
-          const pid = await storePhoto1024(st.newPhotoDataUrl);
-          withBbox.forEach(e => { e.photoId = pid; });
-        } catch (err) { /* 存圖失敗：物品保留 bbox，檢視時顯示載入失敗 */ }
+          photoIds[i] = await storePhoto1024(st.photos[i].dataUrl);
+        } catch (err) { photoIds[i] = null; } // 存圖失敗：相關物品保留 bbox 但無 photoId
       }
+      finalized.forEach(e => {
+        if (e.photoIndex && photoIds[e.photoIndex - 1]) e.photoId = photoIds[e.photoIndex - 1];
+        if (!e.photoId) { e.photoId = null; e.bbox = null; e.photoIndex = null; }
+      });
       finalized.forEach(e => entries.push(e));
       markCloudDirty(); // 物品新增 → 雲端同步排程
       if (finalized.length > 0) {
@@ -3014,20 +3193,36 @@ ${t('promptLangLine')}
   }
 
   // ===== 照片定位放大：點物品 → canvas 即時裁切＋標框（只讀原圖＋座標，不存檔） =====
-  let photoZoomState = null; // {img, bbox:[ymin,xmin,ymax,xmax], view:'crop'|'full'}
+  // 框選手動微調：編輯模式下以 DOM 覆蓋層呈現可拖曳＋四角縮放的框線，儲存後寫回 bbox
+  let photoZoomState = null;
+  // { img, bbox: 目前框|null, aiBox: AI 原始框|null, view:'crop'|'full',
+  //   editing:bool, editBox: 編輯中框, frozen: 編輯時凍結的裁切參數,
+  //   onSaveBox(box)|null, boxEl, drag }
 
-  function openPhotoZoom(entryIdx) {
-    const e = entries[entryIdx];
-    if (!e || !e.photoId || !e.bbox) return;
+  const clampNum = (v, a, b) => Math.min(b, Math.max(a, v));
+
+  function setBboxEditUI(editing) {
+    document.getElementById('photoZoomActions').style.display = editing ? 'flex' : 'none';
+    const eb = document.getElementById('photoZoomEditBtn');
+    if (eb) {
+      if (editing) eb.style.display = 'none';
+      else if (photoZoomState && photoZoomState.onSaveBox && photoZoomState.bbox) eb.style.display = '';
+    }
+    if (editing) document.getElementById('photoZoomHint').textContent = t('photoZoomHintEdit');
+  }
+
+  // 共用開啟器
+  // opts: { title, note, bbox, aiBox, dataUrl, canEdit, onSaveBox(box) }
+  function openPhotoZoomBase(opts) {
     const title = document.getElementById('photoZoomTitle');
     const body = document.getElementById('photoZoomBody');
     const hint = document.getElementById('photoZoomHint');
     const noteEl = document.getElementById('photoZoomNote');
-    title.textContent = e.item || '';
+    title.textContent = opts.title || '';
     noteEl.style.display = 'none';
     hint.textContent = '';
-    const dataUrl = photoStoreGet(e.photoId);
-    if (!dataUrl) {
+    setBboxEditUI(false);
+    if (!opts.dataUrl) {
       // 原圖已被清理（LRU 淘汰或手動清理）：bbox 資訊保留，只顯示提示
       body.innerHTML = `<div class="settings-note warn" style="padding:1.5rem 1rem;">${escapeHtml(t('photoZoomCleaned'))}</div>`;
       document.getElementById('photoZoomOverlay').classList.add('show');
@@ -3036,20 +3231,73 @@ ${t('promptLangLine')}
     body.innerHTML = `<div class="settings-note">${escapeHtml(t('cloudHistoryLoading'))}</div>`;
     const img = new Image();
     img.onload = () => {
-      photoZoomState = { img: img, bbox: e.bbox.slice(), view: 'crop' };
-      if (e.note) { noteEl.textContent = e.note; noteEl.style.display = 'block'; }
+      photoZoomState = {
+        img: img,
+        bbox: opts.bbox ? opts.bbox.slice() : null,
+        aiBox: opts.aiBox ? opts.aiBox.slice() : null,
+        view: 'crop', editing: false, editBox: null, frozen: null,
+        onSaveBox: opts.onSaveBox || null, boxEl: null, drag: null
+      };
+      if (opts.note) { noteEl.textContent = opts.note; noteEl.style.display = 'block'; }
       drawPhotoZoom();
+      // 有框＋可編輯才顯示「調整框選」
+      const eb = document.getElementById('photoZoomEditBtn');
+      if (eb) eb.style.display = (opts.canEdit && opts.bbox) ? '' : 'none';
       document.getElementById('photoZoomOverlay').classList.add('show');
     };
     img.onerror = () => {
       body.innerHTML = `<div class="settings-note warn" style="padding:1.5rem 1rem;">${escapeHtml(t('photoZoomLoadFail'))}</div>`;
       document.getElementById('photoZoomOverlay').classList.add('show');
     };
-    img.src = dataUrl;
+    img.src = opts.dataUrl;
+  }
+
+  // Zoom modal：從「記錄」物品開啟（entry：讀寫 entries[idx].bbox / bboxAi）
+  function openPhotoZoom(entryIdx) {
+    const e = entries[entryIdx];
+    if (!e || !e.photoId || !e.bbox) return;
+    const aiBox = (e.bboxAi ? e.bboxAi.slice() : e.bbox.slice()); // 舊資料只有 bbox → 視為 AI 原始
+    openPhotoZoomBase({
+      title: e.item || '', note: e.note || '', bbox: e.bbox.slice(), aiBox: aiBox,
+      dataUrl: photoStoreGet(e.photoId), canEdit: true,
+      onSaveBox: (box) => {
+        e.bbox = box.slice();
+        if (!e.bboxAi) e.bboxAi = aiBox.slice(); // 舊資料首次儲存時補上 AI 原始
+        renderLog();
+      }
+    });
+  }
+
+  // Zoom modal：從拍照預覽物品開啟（photoState.items[i]：讀寫 it.bbox / it.bboxAi）
+  function openPhotoPreviewZoom(i) {
+    const it = photoState && photoState.items[i];
+    if (!it || !it.photoIndex || !it.bbox) return;
+    const p = photoState.photos[it.photoIndex - 1];
+    if (!p) return;
+    const aiBox = (it.bboxAi ? it.bboxAi.slice() : it.bbox.slice());
+    openPhotoZoomBase({
+      title: it.name || '', note: it.note || '', bbox: it.bbox.slice(), aiBox: aiBox,
+      dataUrl: p.dataUrl, canEdit: true,
+      onSaveBox: (box) => {
+        it.bbox = box.slice();
+        if (!it.bboxAi) it.bboxAi = aiBox.slice();
+        renderPhotoPreview();
+      }
+    });
+  }
+
+  // Zoom modal：拍照預覽照片縮圖的大圖檢視（無框、不可編輯）
+  function openPhotoPreviewFull(i) {
+    const p = photoState && photoState.photos[i];
+    if (!p) return;
+    openPhotoZoomBase({ title: '', note: '', bbox: null, aiBox: null, dataUrl: p.dataUrl, canEdit: false });
   }
 
   function closePhotoZoom() {
     document.getElementById('photoZoomOverlay').classList.remove('show');
+    setBboxEditUI(false);
+    const eb = document.getElementById('photoZoomEditBtn');
+    if (eb) eb.style.display = 'none';
     photoZoomState = null;
   }
 
@@ -3060,45 +3308,194 @@ ${t('promptLangLine')}
     const hint = document.getElementById('photoZoomHint');
     const W = st.img.naturalWidth, H = st.img.naturalHeight;
     if (!W || !H) return;
-    const ymin = st.bbox[0], xmin = st.bbox[1], ymax = st.bbox[2], xmax = st.bbox[3];
-    const bx0 = xmin / 1000 * W, by0 = ymin / 1000 * H;
-    const bx1 = xmax / 1000 * W, by1 = ymax / 1000 * H;
-    let sx, sy, sw, sh;
-    if (st.view === 'crop') {
-      // 以 bbox 為中心向外擴 25% padding，夾在圖邊界內不越界
-      const padX = (bx1 - bx0) * 0.25, padY = (by1 - by0) * 0.25;
-      sx = Math.max(0, bx0 - padX);
-      sy = Math.max(0, by0 - padY);
-      const ex1 = Math.min(W, bx1 + padX), ey1 = Math.min(H, by1 + padY);
-      sw = Math.max(1, ex1 - sx);
-      sh = Math.max(1, ey1 - sy);
-    } else {
-      sx = 0; sy = 0; sw = W; sh = H;
-    }
+    const refBox = st.editing ? (st.editBox || st.bbox) : st.bbox;
+    let sx, sy, sw, sh, scale;
     const maxW = Math.min(window.innerWidth * 0.86, 560);
     const maxH = window.innerHeight * 0.55;
-    const scale = Math.min(maxW / sw, maxH / sh);
+    if (st.editing && st.frozen) {
+      // 編輯中：使用凍結的裁切區，拖曳時視角不跳動
+      ({ sx, sy, sw, sh, scale } = st.frozen);
+    } else {
+      if (st.view === 'crop' && refBox) {
+        const ymin = refBox[0], xmin = refBox[1], ymax = refBox[2], xmax = refBox[3];
+        const bx0 = xmin / 1000 * W, by0 = ymin / 1000 * H;
+        const bx1 = xmax / 1000 * W, by1 = ymax / 1000 * H;
+        // 以 bbox 為中心向外擴 35% padding，夾在圖邊界內不越界
+        const padX = (bx1 - bx0) * 0.35, padY = (by1 - by0) * 0.35;
+        sx = Math.max(0, bx0 - padX);
+        sy = Math.max(0, by0 - padY);
+        const ex1 = Math.min(W, bx1 + padX), ey1 = Math.min(H, by1 + padY);
+        sw = Math.max(1, ex1 - sx);
+        sh = Math.max(1, ey1 - sy);
+      } else {
+        sx = 0; sy = 0; sw = W; sh = H;
+      }
+      scale = Math.min(maxW / sw, maxH / sh);
+      if (st.editing) st.frozen = { sx, sy, sw, sh, scale }; // 進入編輯的第一幀凍結裁切區
+    }
     body.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;line-height:0;';
     const canvas = document.createElement('canvas');
     canvas.id = 'photoZoomCanvas';
     canvas.width = Math.max(1, Math.round(sw * scale));
     canvas.height = Math.max(1, Math.round(sh * scale));
-    canvas.onclick = () => {
-      photoZoomState.view = photoZoomState.view === 'crop' ? 'full' : 'crop';
-      drawPhotoZoom();
-    };
-    body.appendChild(canvas);
+    if (!st.editing) {
+      canvas.onclick = () => {
+        photoZoomState.view = photoZoomState.view === 'crop' ? 'full' : 'crop';
+        drawPhotoZoom();
+      };
+    }
+    wrap.appendChild(canvas);
+    body.appendChild(wrap);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(st.img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    // 標出 bbox 本體位置
-    const rx = (bx0 - sx) * scale, ry = (by0 - sy) * scale;
-    const rw = (bx1 - bx0) * scale, rh = (by1 - by0) * scale;
-    ctx.fillStyle = 'rgba(34,197,94,0.18)';
-    ctx.fillRect(rx, ry, rw, rh);
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = Math.max(2, Math.round(scale * 1.5));
-    ctx.strokeRect(rx, ry, rw, rh);
-    hint.textContent = t(st.view === 'crop' ? 'photoZoomHintCrop' : 'photoZoomHintFull');
+    if (!st.editing && refBox) {
+      // 標出 bbox 本體位置
+      const bx0 = refBox[1] / 1000 * W, by0 = refBox[0] / 1000 * H;
+      const bx1 = refBox[3] / 1000 * W, by1 = refBox[2] / 1000 * H;
+      const rx = (bx0 - sx) * scale, ry = (by0 - sy) * scale;
+      const rw = (bx1 - bx0) * scale, rh = (by1 - by0) * scale;
+      ctx.fillStyle = 'rgba(34,197,94,0.18)';
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = Math.max(2, Math.round(scale * 1.5));
+      ctx.strokeRect(rx, ry, rw, rh);
+    }
+    if (st.editing) {
+      // DOM 覆蓋層：可拖曳整框＋四角縮放
+      const box = document.createElement('div');
+      box.id = 'bboxEditBox';
+      box.style.cssText = 'position:absolute;border:2px solid #22c55e;background:rgba(34,197,94,0.15);cursor:move;touch-action:none;line-height:normal;';
+      ['nw', 'ne', 'sw', 'se'].forEach(h => {
+        const hd = document.createElement('div');
+        hd.className = 'bbox-handle';
+        hd.dataset.h = h;
+        box.appendChild(hd);
+      });
+      wrap.appendChild(box);
+      st.boxEl = box;
+      positionBboxBox();
+      attachBboxGestures(box);
+    }
+    if (!st.editing) hint.textContent = t(st.view === 'crop' && refBox ? 'photoZoomHintCrop' : 'photoZoomHintFull');
+  }
+
+  // ===== 框選手動微調 =====
+  function startBboxEdit() {
+    const st = photoZoomState;
+    if (!st || !st.bbox || !st.onSaveBox || st.editing) return;
+    st.editing = true;
+    st.editBox = st.bbox.slice();
+    st.frozen = null; // drawPhotoZoom 會在第一幀凍結裁切區
+    setBboxEditUI(true);
+    drawPhotoZoom();
+  }
+
+  function saveBboxEdit() {
+    const st = photoZoomState;
+    if (!st || !st.editing || !st.editBox || !st.onSaveBox) return;
+    let [ymin, xmin, ymax, xmax] = st.editBox.map(v => Math.round(clampNum(v, 0, 1000)));
+    if (!(ymin < ymax && xmin < xmax)) { alert(t('photoZoomBoxInvalid')); return; }
+    const box = [ymin, xmin, ymax, xmax];
+    st.editing = false;
+    st.editBox = null;
+    st.frozen = null;
+    st.bbox = box.slice();
+    setBboxEditUI(false);
+    st.onSaveBox(box);
+    markCloudDirty(); // 框線變更 → 雲端同步排程
+    drawPhotoZoom();
+  }
+
+  function cancelBboxEdit() {
+    const st = photoZoomState;
+    if (!st) return;
+    st.editing = false;
+    st.editBox = null;
+    st.frozen = null;
+    st.drag = null;
+    setBboxEditUI(false);
+    drawPhotoZoom();
+  }
+
+  function resetBboxEdit() {
+    const st = photoZoomState;
+    if (!st || !st.editing || !st.aiBox) return;
+    st.editBox = st.aiBox.slice(); // 回復 AI 原始框（實際寫入要按儲存）
+    positionBboxBox();
+  }
+
+  // 依 st.editBox（0-1000）定位 DOM 覆蓋層（以凍結裁切區換算為顯示 px）
+  function positionBboxBox() {
+    const st = photoZoomState;
+    if (!st || !st.editing || !st.boxEl || !st.editBox || !st.frozen) return;
+    const f = st.frozen;
+    const W = st.img.naturalWidth, H = st.img.naturalHeight;
+    const [ymin, xmin, ymax, xmax] = st.editBox;
+    const bx0 = xmin / 1000 * W, by0 = ymin / 1000 * H;
+    const bx1 = xmax / 1000 * W, by1 = ymax / 1000 * H;
+    const rx = (bx0 - f.sx) * f.scale, ry = (by0 - f.sy) * f.scale;
+    const rw = (bx1 - bx0) * f.scale, rh = (by1 - by0) * f.scale;
+    const el = st.boxEl;
+    el.style.left = rx + 'px';
+    el.style.top = ry + 'px';
+    el.style.width = Math.max(4, rw) + 'px';
+    el.style.height = Math.max(4, rh) + 'px';
+  }
+
+  // 拖曳整框＋四角縮放（pointer 事件，同時支援滑鼠與觸控）
+  function attachBboxGestures(boxEl) {
+    const st = photoZoomState;
+    if (!st) return;
+    boxEl.addEventListener('pointerdown', (ev) => {
+      if (!st.editing || !st.frozen) return;
+      ev.preventDefault();
+      try { boxEl.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      const handle = (ev.target && ev.target.dataset && ev.target.dataset.h) || null;
+      st.drag = {
+        pointerId: ev.pointerId,
+        handle: handle, // null = 整框拖曳；否則為 'nw'/'ne'/'sw'/'se'
+        startX: ev.clientX, startY: ev.clientY,
+        box: st.editBox.slice()
+      };
+    });
+    boxEl.addEventListener('pointermove', (ev) => {
+      if (!st.drag || ev.pointerId !== st.drag.pointerId || !st.frozen) return;
+      const f = st.frozen;
+      const W = st.img.naturalWidth, H = st.img.naturalHeight;
+      // client px → 0-1000 座標
+      const dx = (ev.clientX - st.drag.startX) / f.scale / W * 1000;
+      const dy = (ev.clientY - st.drag.startY) / f.scale / H * 1000;
+      const b = st.drag.box; // 起始框 [ymin,xmin,ymax,xmax]
+      let ymin = b[0], xmin = b[1], ymax = b[2], xmax = b[3];
+      if (!st.drag.handle) {
+        // 整框拖曳：保持寬高，夾在 0-1000 內
+        const w = xmax - xmin, h = ymax - ymin;
+        xmin = clampNum(b[1] + dx, 0, 1000 - w);
+        ymin = clampNum(b[0] + dy, 0, 1000 - h);
+        xmax = xmin + w; ymax = ymin + h;
+      } else {
+        const hdl = st.drag.handle;
+        if (hdl.indexOf('n') >= 0) ymin = b[0] + dy;
+        if (hdl.indexOf('s') >= 0) ymax = b[2] + dy;
+        if (hdl.indexOf('w') >= 0) xmin = b[1] + dx;
+        if (hdl.indexOf('e') >= 0) xmax = b[3] + dx;
+        // 最小 10 單位，避免框消失
+        if (ymax - ymin < 10) { if (hdl.indexOf('n') >= 0) ymin = ymax - 10; else ymax = ymin + 10; }
+        if (xmax - xmin < 10) { if (hdl.indexOf('w') >= 0) xmin = xmax - 10; else xmax = xmin + 10; }
+        ymin = clampNum(ymin, 0, 1000); ymax = clampNum(ymax, 0, 1000);
+        xmin = clampNum(xmin, 0, 1000); xmax = clampNum(xmax, 0, 1000);
+        // 拖過對邊時交換，保持 ymin<ymax、xmin<xmax
+        if (ymin > ymax) { const tmp = ymin; ymin = ymax; ymax = tmp; }
+        if (xmin > xmax) { const tmp = xmin; xmin = xmax; xmax = tmp; }
+      }
+      st.editBox = [Math.round(ymin), Math.round(xmin), Math.round(ymax), Math.round(xmax)];
+      positionBboxBox();
+    });
+    const endDrag = (ev) => { if (st.drag && ev.pointerId === st.drag.pointerId) st.drag = null; };
+    boxEl.addEventListener('pointerup', endDrag);
+    boxEl.addEventListener('pointercancel', endDrag);
   }
 
 
