@@ -544,6 +544,47 @@
     text-decoration: none;
   }
   .get-key-link:hover { text-decoration: underline; }
+
+  /* ===== 空間（Spaces） ===== */
+  .space-add-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .space-add-row .search-input { flex: 1; min-width: 0; }
+  .space-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.9rem; margin-bottom: 0.8rem;
+  }
+  .space-card-top { display: flex; gap: 0.8rem; align-items: center; }
+  .space-photo {
+    width: 64px; height: 64px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+    background: var(--soft); display: flex; align-items: center; justify-content: center;
+  }
+  .space-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .space-photo-ph { font-size: 1.8rem; }
+  .space-info { flex: 1; min-width: 0; }
+  .space-name { font-weight: 700; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .space-meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+  .space-del { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 0.2rem; }
+  .space-photo-row { display: flex; gap: 0.5rem; margin-top: 0.7rem; flex-wrap: wrap; }
+  .zone-list { margin-top: 0.7rem; }
+  .zone-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.4rem 0.6rem; background: var(--soft); border-radius: 6px;
+    margin-bottom: 0.35rem; font-size: 0.85rem;
+  }
+  .zone-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; }
+  .zone-del:hover { color: var(--error); }
+  .zone-add-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+  .zone-add-row .search-input { flex: 1; min-width: 0; }
+  .space-badge {
+    display: inline-block; font-size: 0.72rem; color: var(--accent);
+    background: var(--accent-light); border: 1px solid var(--accent);
+    border-radius: 4px; padding: 0.1rem 0.4rem; margin-left: 0.4rem; white-space: nowrap;
+  }
+  .space-filter-label { font-size: 0.8rem; color: var(--muted); }
+  .space-filter-select {
+    font-family: inherit; font-size: 0.8rem; padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--card);
+    color: inherit; max-width: 60%;
+  }
 </style>
 </head>
 <body>
@@ -610,6 +651,19 @@
 
   </section>
 
+  <!-- ===== Tab：tab-spaces ===== -->
+  <section class="tab-section" id="tab-spaces" style="display:none">
+  <div class="log-header">
+    <span class="log-title" data-i18n="spacesTitle">我的空間</span>
+  </div>
+  <div class="space-add-row">
+    <input type="text" class="search-input" id="spaceNameInput" data-i18n-placeholder="spaceNamePh" placeholder="房間名稱，例如：客廳" onkeydown="if(event.key==='Enter')addSpace()">
+    <button class="log-btn" onclick="addSpace()" data-i18n="btnAddSpace">＋ 新增房間</button>
+  </div>
+  <div id="spacesContainer"></div>
+  <input type="file" id="spacePhotoInput" accept="image/*" style="display:none" onchange="handleSpacePhotoSelect(event)">
+  </section>
+
   <!-- ===== Tab：tab-items ===== -->
   <section class="tab-section" id="tab-items" style="display:none">
   <div class="search-card">
@@ -648,6 +702,10 @@
       <button class="view-btn" id="viewByLocation" onclick="setViewMode('location')" data-i18n="viewByLocation">依櫃子分類</button>
     </div>
     <span></span>
+  </div>
+  <div class="log-header" style="margin-top:-0.5rem">
+    <span class="space-filter-label" data-i18n="spaceFilterLabel">空間篩選</span>
+    <select class="space-filter-select" id="spaceFilter" onchange="setSpaceFilter(this.value)"></select>
   </div>
   <div id="logContainer">
     <div class="empty-state" id="emptyState" data-i18n="emptyState">還沒有任何紀錄，開始輸入或匯入檔案試試看</div>
@@ -738,6 +796,10 @@
       <button class="tab-btn active" data-tab="add" onclick="switchTab('add')">
         <span class="tab-icon">📝</span>
         <span class="tab-label" data-i18n="tabAdd">建檔</span>
+      </button>
+      <button class="tab-btn" data-tab="spaces" onclick="switchTab('spaces')">
+        <span class="tab-icon">🏠</span>
+        <span class="tab-label" data-i18n="tabSpaces">空間</span>
       </button>
       <button class="tab-btn" data-tab="items" onclick="switchTab('items')">
         <span class="tab-icon">📦</span>
@@ -978,6 +1040,20 @@
   let photoBase64 = null;
   let photoMime = 'image/jpeg';
   let inputStartedAt = null; // timestamp when user began this input (first keystroke / recording start / photo taken)
+  // ===== 空間（Spaces）：房間 → 區域 → 物品 =====
+  // space = { id, name, photo (dataURL JPEG 或 null), zones: [{ id, name }] }
+  // entry 可選欄位 spaceId / zoneId；舊資料沒有這兩個欄位也能正常顯示
+  const SPACES_KEY = 'homebase_spaces';
+  let spaces = [];
+  let currentSpaceFilter = 'all';
+  let pendingPhotoSpaceId = null;
+
+  function uid(prefix) {
+    return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  function escapeHtml(val) {
+    return String(val ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
   function setInputMode(mode) {
     currentInputMode = mode;
@@ -1186,7 +1262,27 @@
       cat8: "配件", cat9: "文件", cat10: "玩具", cat11: "其他",
       tabAdd: "建檔", tabItems: "記錄", tabSettings: "設定",
       dataTitle: "資料管理",
-      getGeminiKey: "取得 Gemini API Key"
+      getGeminiKey: "取得 Gemini API Key",
+      tabSpaces: "空間",
+      spacesTitle: "我的空間",
+      spaceNamePh: "房間名稱，例如：客廳",
+      btnAddSpace: "＋ 新增房間",
+      spacesEmpty: "還沒有房間，先新增第一個房間吧",
+      zoneCount: "{n} 個區域",
+      spaceItemCount: "{n} 件物品",
+      btnAddZone: "新增區域",
+      zoneNamePh: "區域名稱，例如：電視櫃",
+      btnUploadPhoto: "上傳照片",
+      btnChangePhoto: "更換照片",
+      btnDeletePhoto: "刪除照片",
+      btnDeleteSpace: "刪除房間",
+      btnDeleteZone: "刪除區域",
+      spaceDeleteConfirm: "確定要刪除房間「{name}」嗎？裡面的區域會一併刪除，物品的空間標記會保留但不再連結。",
+      reviewSpace: "空間（房間）",
+      reviewZone: "區域",
+      optNoSpace: "— 不指定 —",
+      spaceFilterAll: "全部空間",
+      spaceFilterLabel: "空間篩選"
     },
     'en': {
       docTitle: "HomeBase · Voice Inventory Demo",
@@ -1312,7 +1408,27 @@
       cat8: "Accessories", cat9: "Documents", cat10: "Toys", cat11: "Other",
       tabAdd: "Add", tabItems: "Items", tabSettings: "Settings",
       dataTitle: "Data",
-      getGeminiKey: "Get Gemini API Key"
+      getGeminiKey: "Get Gemini API Key",
+      tabSpaces: "Spaces",
+      spacesTitle: "My Spaces",
+      spaceNamePh: "Room name, e.g. Living Room",
+      btnAddSpace: "+ Add Room",
+      spacesEmpty: "No rooms yet — add your first room above",
+      zoneCount: "{n} zones",
+      spaceItemCount: "{n} items",
+      btnAddZone: "Add Zone",
+      zoneNamePh: "Zone name, e.g. TV stand",
+      btnUploadPhoto: "Upload Photo",
+      btnChangePhoto: "Change Photo",
+      btnDeletePhoto: "Delete Photo",
+      btnDeleteSpace: "Delete Room",
+      btnDeleteZone: "Delete Zone",
+      spaceDeleteConfirm: "Delete room \"{name}\"? Its zones will be removed too. Items keep their space tag but it will no longer link.",
+      reviewSpace: "Space (Room)",
+      reviewZone: "Zone",
+      optNoSpace: "— None —",
+      spaceFilterAll: "All Spaces",
+      spaceFilterLabel: "Space filter"
     }
   };
 
@@ -1429,6 +1545,7 @@
     if (typeof selectProvider === 'function' && aiConfig) selectProvider(aiConfig.provider, true);
     renderHistory();
     renderLog();
+    renderSpaces();
     if (document.getElementById('reviewOverlay').classList.contains('show')) renderReviewQueue();
   }
 
@@ -1622,7 +1739,9 @@ ${entrySchema}
       quantity: (e.quantity === null || e.quantity === undefined) ? '' : e.quantity,
       unit: e.unit || '',
       note: e.note || '',
-      placed_at_raw: e.placed_at_raw || ''
+      placed_at_raw: e.placed_at_raw || '',
+      spaceId: e.spaceId || '',
+      zoneId: e.zoneId || ''
     }));
     reviewMeta = { sourceLabel, source, timing: timing || {} };
     document.getElementById('reviewSubtitle').textContent = t('reviewSubtitle', { n: reviewQueue.length });
@@ -1650,6 +1769,22 @@ ${entrySchema}
       <div class="review-item">
         <div class="review-item-top">
           <button class="review-item-remove" onclick="removeReviewItem(${i})">${t('reviewRemove')}</button>
+        </div>
+        <div class="review-field-row">
+          <div class="review-field">
+            <label>${t('reviewSpace')}</label>
+            <select onchange="onReviewSpaceChange(${i}, this.value)">
+              <option value="">${t('optNoSpace')}</option>
+              ${spaces.map(s => `<option value="${s.id}"${s.id === e.spaceId ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="review-field">
+            <label>${t('reviewZone')}</label>
+            <select onchange="onReviewZoneChange(${i}, this.value)"${e.spaceId ? '' : ' disabled'}>
+              <option value="">${t('optNoSpace')}</option>
+              ${(() => { const sp = findSpace(e.spaceId); return sp ? sp.zones.map(z => `<option value="${z.id}"${z.id === e.zoneId ? ' selected' : ''}>${escapeHtml(z.name)}</option>`).join('') : ''; })()}
+            </select>
+          </div>
         </div>
         <div class="review-field-row">
           <div class="review-field">
@@ -1707,6 +1842,26 @@ ${entrySchema}
     reviewQueue[index][field] = value;
   }
 
+  // 確認建檔時選空間/區域：自動把 location_label 填為「房間 › 區域」（仍可手動修改）；不選則維持原行為
+  function onReviewSpaceChange(index, spaceId) {
+    const e = reviewQueue[index];
+    if (!e) return;
+    e.spaceId = spaceId || '';
+    e.zoneId = '';
+    const sp = findSpace(e.spaceId);
+    if (sp) e.location_label = sp.name;
+    renderReviewQueue();
+  }
+
+  function onReviewZoneChange(index, zoneId) {
+    const e = reviewQueue[index];
+    if (!e) return;
+    e.zoneId = zoneId || '';
+    const label = spaceLabel(e.spaceId, e.zoneId);
+    if (label) e.location_label = label;
+    renderReviewQueue();
+  }
+
   function removeReviewItem(index) {
     reviewQueue.splice(index, 1);
     renderReviewQueue();
@@ -1726,6 +1881,8 @@ ${entrySchema}
       unit: e.unit.trim(),
       note: e.note.trim(),
       placed_at_raw: e.placed_at_raw.trim(), // 使用者口語描述的實際放入/購買時間，例如「上禮拜」
+      spaceId: e.spaceId || '', // 選填：空間（房間）id；舊資料沒有此欄位
+      zoneId: e.zoneId || '', // 選填：區域 id；舊資料沒有此欄位
       input_started_at: timing.startedAt || confirmedAt, // 開始說話／拍照／打字的時間
       submitted_at: timing.submittedAt || confirmedAt,   // 送出給 AI 解析的時間
       confirmed_at: confirmedAt,                          // 使用者確認加入庫存的時間
@@ -1850,12 +2007,19 @@ ${entrySchema}
     // Group entries
     const groups = {};
     entries.forEach((e, idx) => {
+      if (currentSpaceFilter !== 'all' && e.spaceId !== currentSpaceFilter) return; // 空間篩選
       const key = groupKey(e);
       if (!groups[key]) groups[key] = [];
       groups[key].push({ ...e, _idx: idx });
     });
 
     const sortedKeys = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
+
+    if (sortedKeys.length === 0) {
+      container.innerHTML = '';
+      container.appendChild(empty);
+      return;
+    }
 
     container.innerHTML = sortedKeys.map(key => {
       const items = groups[key];
@@ -1865,7 +2029,7 @@ ${entrySchema}
       const itemRows = items.map(e => `
         <div class="tree-item-row">
           ${currentViewMode === 'category' && e.location_id ? `<span class="tree-item-loc">${e.location_id}</span>` : ''}
-          <span class="tree-item-name">${e.item}</span>
+          <span class="tree-item-name">${e.item}</span>${spaceBadge(e)}
           ${e.quantity !== null && e.quantity !== undefined ? `<span class="tree-item-qty">${e.quantity}${e.unit ? ' ' + e.unit : ''}</span>` : ''}
           ${e.note ? `<div class="tree-item-note">${t('treeNotePrefix')}${e.note}</div>` : ''}
         </div>
@@ -1921,8 +2085,19 @@ ${entrySchema}
         
         // 基本資料結構格式檢查
         if (Array.isArray(importedData)) {
-          // 直接覆蓋現有資料（或改用 entries = entries.concat(importedData) 來變成用追加的方式）
+          // 舊格式：純 entries 陣列（向後相容）
           entries = importedData;
+          expandedGroups.clear();
+          renderLog();
+          alert(t('importSuccess', { n: entries.length }));
+        } else if (importedData && Array.isArray(importedData.entries)) {
+          // 新格式：{ app, version, exportedAt, entries, spaces }
+          entries = importedData.entries;
+          if (Array.isArray(importedData.spaces)) {
+            spaces = importedData.spaces;
+            saveSpaces();
+            renderSpaces();
+          }
           expandedGroups.clear();
           renderLog();
           alert(t('importSuccess', { n: entries.length }));
@@ -1939,7 +2114,15 @@ ${entrySchema}
   }
 
   function downloadJson() {
-    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+    // 新格式：{ app, version, exportedAt, entries, spaces }；舊版純陣列格式仍可匯入（向後相容）
+    const payload = {
+      app: 'homebase',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      entries: entries,
+      spaces: spaces
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -2050,6 +2233,190 @@ ${t('promptLangLine')}`;
     window.scrollTo(0, 0);
   }
 
+  // ===== 空間（Spaces）CRUD + 渲染 =====
+  function loadSpaces() {
+    try {
+      const saved = localStorage.getItem(SPACES_KEY);
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr)) spaces = arr;
+      }
+    } catch (e) { /* ignore */ }
+    // 正規化：過濾壞掉的資料
+    spaces = (Array.isArray(spaces) ? spaces : []).filter(s => s && s.id).map(s => ({
+      id: s.id,
+      name: s.name || '',
+      photo: s.photo || null,
+      zones: Array.isArray(s.zones) ? s.zones.filter(z => z && z.id).map(z => ({ id: z.id, name: z.name || '' })) : []
+    }));
+  }
+
+  function saveSpaces() {
+    try {
+      localStorage.setItem(SPACES_KEY, JSON.stringify(spaces));
+    } catch (e) { /* ignore: 可能是 quota 滿了 */ }
+  }
+
+  function findSpace(id) { return spaces.find(s => s.id === id) || null; }
+  function findZone(spaceId, zoneId) {
+    const sp = findSpace(spaceId);
+    return sp ? (sp.zones.find(z => z.id === zoneId) || null) : null;
+  }
+  // 「房間 › 區域」顯示文字；找不到時回傳空字串（向後相容：舊資料無 spaceId）
+  function spaceLabel(spaceId, zoneId) {
+    const sp = findSpace(spaceId);
+    if (!sp) return '';
+    const z = zoneId ? sp.zones.find(zz => zz.id === zoneId) : null;
+    return z ? sp.name + ' › ' + z.name : sp.name;
+  }
+  // 物品卡片上的空間徽章
+  function spaceBadge(e) {
+    const label = e && e.spaceId ? spaceLabel(e.spaceId, e.zoneId) : '';
+    if (!label) return '';
+    return `<span class="space-badge">📍 ${escapeHtml(label)}</span>`;
+  }
+
+  function renderSpaces() {
+    const container = document.getElementById('spacesContainer');
+    if (!container) return;
+    if (currentSpaceFilter !== 'all' && !findSpace(currentSpaceFilter)) currentSpaceFilter = 'all';
+    if (spaces.length === 0) {
+      container.innerHTML = `<div class="empty-state" data-i18n="spacesEmpty">${t('spacesEmpty')}</div>`;
+    } else {
+      container.innerHTML = spaces.map(sp => {
+        const itemCount = entries.filter(e => e.spaceId === sp.id).length;
+        const zones = sp.zones || [];
+        return `
+        <div class="space-card">
+          <div class="space-card-top">
+            <div class="space-photo">${sp.photo ? `<img src="${sp.photo}" alt="">` : `<div class="space-photo-ph">🏠</div>`}</div>
+            <div class="space-info">
+              <div class="space-name">${escapeHtml(sp.name)}</div>
+              <div class="space-meta">${t('zoneCount', { n: zones.length })} · ${t('spaceItemCount', { n: itemCount })}</div>
+            </div>
+            <button class="space-del" onclick="deleteSpace('${sp.id}')" title="${escapeAttr(t('btnDeleteSpace'))}">🗑️</button>
+          </div>
+          <div class="space-photo-row">
+            <button class="log-btn" onclick="triggerSpacePhoto('${sp.id}')">${t(sp.photo ? 'btnChangePhoto' : 'btnUploadPhoto')}</button>
+            ${sp.photo ? `<button class="log-btn" onclick="deleteSpacePhoto('${sp.id}')">${t('btnDeletePhoto')}</button>` : ''}
+          </div>
+          <div class="zone-list">
+            ${zones.map(z => `
+              <div class="zone-row">
+                <span class="zone-name">${escapeHtml(z.name)}</span>
+                <button class="zone-del" onclick="deleteZone('${sp.id}', '${z.id}')" title="${escapeAttr(t('btnDeleteZone'))}">✕</button>
+              </div>`).join('')}
+          </div>
+          <div class="zone-add-row">
+            <input type="text" class="search-input" id="zoneInput-${sp.id}" placeholder="${escapeAttr(t('zoneNamePh'))}" onkeydown="if(event.key==='Enter')addZone('${sp.id}')">
+            <button class="log-btn" onclick="addZone('${sp.id}')">${t('btnAddZone')}</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    renderSpaceFilter();
+  }
+
+  function addSpace() {
+    const input = document.getElementById('spaceNameInput');
+    const name = input.value.trim();
+    if (!name) return;
+    spaces.push({ id: uid('sp_'), name: name, photo: null, zones: [] });
+    input.value = '';
+    saveSpaces();
+    renderSpaces();
+  }
+
+  function deleteSpace(id) {
+    const sp = findSpace(id);
+    if (!sp) return;
+    if (!confirm(t('spaceDeleteConfirm', { name: sp.name }))) return;
+    spaces = spaces.filter(s => s.id !== id);
+    saveSpaces();
+    renderSpaces();
+    renderLog(); // 物品數徽章可能受影響
+  }
+
+  function addZone(spaceId) {
+    const sp = findSpace(spaceId);
+    if (!sp) return;
+    const input = document.getElementById('zoneInput-' + spaceId);
+    const name = input.value.trim();
+    if (!name) return;
+    sp.zones.push({ id: uid('z_'), name: name });
+    saveSpaces();
+    renderSpaces();
+  }
+
+  function deleteZone(spaceId, zoneId) {
+    const sp = findSpace(spaceId);
+    if (!sp) return;
+    sp.zones = sp.zones.filter(z => z.id !== zoneId);
+    saveSpaces();
+    renderSpaces();
+  }
+
+  // 房間照片：上傳前用 canvas 壓縮（最長邊 800px、JPEG 0.7），避免 localStorage 爆掉
+  function triggerSpacePhoto(spaceId) {
+    pendingPhotoSpaceId = spaceId;
+    document.getElementById('spacePhotoInput').click();
+  }
+
+  function handleSpacePhotoSelect(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file || !pendingPhotoSpaceId) return;
+    const spaceId = pendingPhotoSpaceId;
+    pendingPhotoSpaceId = null;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        const sp = findSpace(spaceId);
+        if (sp) {
+          sp.photo = dataUrl;
+          saveSpaces();
+          renderSpaces();
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function deleteSpacePhoto(spaceId) {
+    const sp = findSpace(spaceId);
+    if (!sp) return;
+    sp.photo = null;
+    saveSpaces();
+    renderSpaces();
+  }
+
+  // 記錄 Tab 的空間篩選
+  function renderSpaceFilter() {
+    const sel = document.getElementById('spaceFilter');
+    if (!sel) return;
+    if (currentSpaceFilter !== 'all' && !findSpace(currentSpaceFilter)) currentSpaceFilter = 'all';
+    sel.innerHTML = `<option value="all">${t('spaceFilterAll')}</option>` +
+      spaces.map(s => `<option value="${s.id}"${s.id === currentSpaceFilter ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+  }
+
+  function setSpaceFilter(v) {
+    currentSpaceFilter = v;
+    renderLog();
+  }
+
   // ===== API Key 提醒：沒有 key 時先引導去「設定」 =====
   function hasApiKey() {
     return !!(typeof aiConfig !== 'undefined' && aiConfig.apiKey);
@@ -2067,6 +2434,7 @@ ${t('promptLangLine')}`;
 
   // Init
   document.addEventListener('DOMContentLoaded', () => {
+    loadSpaces();
     applyLang(detectLang());
     initRecognition();
     loadSettings();
